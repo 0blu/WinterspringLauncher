@@ -1,0 +1,40 @@
+name: Build Proxy
+
+on: ['push']
+
+env:
+  DOTNET_VERSION: '6.0.x'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: ['windows']
+    runs-on: ${{ matrix.os }}-latest
+
+    steps:
+      - name: Checkout repository content
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET Core SDK
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install dependencies
+        run: dotnet restore
+
+      - name: Publish
+        run: dotnet publish --configuration Release --use-current-runtime -p:UsePublishBuildSettings=true
+
+      - name: Copy files
+        run: cp -r ./EverlookClassic.Launcher/bin/Release/*/publish/ publish
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: EverlookClassic-${{ matrix.os }}-${{ runner.arch }}-${{ github.sha }}
+          path: publish
+          if-no-files-found: error
