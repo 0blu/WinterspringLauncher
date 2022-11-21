@@ -79,8 +79,10 @@ public static class LauncherActions
                 return; // I dont know where I am
             }
 
+            var workingDirectory = Path.GetDirectoryName(target)!;
+
             Console.WriteLine("Creating Desktop Icon");
-            WindowsShellApi.CreateShortcut(shortcutPath, description, target);
+            WindowsShellApi.CreateShortcut(shortcutPath, description, target, workingDirectory);
         }
         catch
         {
