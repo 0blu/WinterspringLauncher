@@ -7,7 +7,8 @@ Allows you to play on [Everlook.org](https://everlook.org/) with modern 1.14 WoW
 
 ## Easy setup
 The launcher will do everything for you.  
-It will download the 1.14 client, setup HermesProxy and launch the game.
+It will download the 1.14 client, setup HermesProxy and launch the game.  
+When HermesProxy has an update it is automatically applied.
 
 1. **Download [the latest release](https://github.com/0blu/EverlookClassicLauncher/releases)**
 2. Place it in a separate directory (On first launch it will create subfolders and a desktop icon)
