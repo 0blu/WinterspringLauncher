@@ -1,13 +1,14 @@
 ﻿using System.Globalization;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using EverlookClassic.Launcher.Utils;
+using WinterspringLauncher.Utils;
 
-namespace EverlookClassic.Launcher;
+namespace WinterspringLauncher;
 
 class Launcher
 {
-    private const string CONFIG_FILE_NAME = "everlook-classic.json";
+    private const string LEGACY_CONFIG_FILE_NAME = "everlook-classic.json";
+    private const string CONFIG_FILE_NAME = "winterspring-launcher-config.json";
     
     internal static void Main()
     {
@@ -21,6 +22,17 @@ class Launcher
         string FullPath(string subPath) => Path.GetFullPath(Path.Combine(baseFolder, subPath));
 
         string configPath = Path.Combine(baseFolder, CONFIG_FILE_NAME);
+        // Convert legacy config into new one
+        IgnoreExceptions("rename old config", () => {
+            string legacyConfigPath = Path.Combine(baseFolder, LEGACY_CONFIG_FILE_NAME);
+            if (File.Exists(legacyConfigPath))
+            {
+                Console.WriteLine($"Renaming old config to {CONFIG_FILE_NAME}");
+                Thread.Sleep(1);
+                File.Move(legacyConfigPath, configPath);
+            }
+        });
+
         var config = LoadConfig(configPath);
         var api = new UpdateApiClient(config);
 
@@ -58,16 +70,19 @@ class Launcher
 
     private static void UpdateThisLauncherIfNecessary(UpdateApiClient api)
     {
-        var v = Assembly.GetExecutingAssembly().GetName().Version!;
-        string myLauncherVersion = $"{v.Major}.{v.Minor}.{v.Build}";
+        Version myVersion = Assembly.GetExecutingAssembly().GetName().Version!;
+        string myVersionStr = $"{myVersion.Major}.{myVersion.Minor}.{myVersion.Build}";
 
         GitHubReleaseInfo latestLauncherVersion = api.GetLatestThisLauncherRelease();
-
-        if (latestLauncherVersion.TagName != null && myLauncherVersion != latestLauncherVersion.TagName)
+        if (latestLauncherVersion.TagName != null && myVersionStr != latestLauncherVersion.TagName)
         {
-            Console.WriteLine($"New launcher update {myLauncherVersion} => {latestLauncherVersion.TagName}");
-            // This function might not return because it updates the launcher in-place
-            LauncherActions.UpdateThisLauncher(latestLauncherVersion);
+            var newVersion = Version.Parse(latestLauncherVersion.TagName);
+            if (newVersion > myVersion)
+            {
+                Console.WriteLine($"New launcher update {myVersionStr} => {latestLauncherVersion.TagName}");
+                // This function might not return because it updates the launcher in-place
+                LauncherActions.UpdateThisLauncher(latestLauncherVersion);
+            }
         }
     }
 
@@ -222,6 +237,7 @@ class Launcher
     private static void PrintLogo()
     {
         Console.WriteLine($"Version: {GetVersionInformation()}");
+        Console.WriteLine("https://github.com/0blu/WinterspringLauncher");
         Console.WriteLine("");
 
         void WriteWithASubtext(string logo, string subText)
@@ -237,7 +253,7 @@ class Launcher
         Console.WriteLine("            ...      ..");
         Console.WriteLine("       .,,,,,..        .,,");
         Console.WriteLine("     ,,,,,    ....       ,,,");
-        WriteWithASubtext("    .,,,.  ,,,,,,,,,,,    ,,,", "      Everlook Classic");
+        WriteWithASubtext("    .,,,.  ,,,,,,,,,,,    ,,,", "        Winterspring");
         WriteWithASubtext("    ,,,,. .,,,,   ,,,,.   ,,,,", "         Launcher");
         Console.WriteLine("    .,,,,         ,,,,.   ,,,,");
         WriteWithASubtext("     ,,,,,,,...,,,,,,,   ,,,,.", "      Allows you to");

@@ -1,6 +1,6 @@
 ﻿using System.Timers;
 
-namespace EverlookClassic.Launcher.Utils;
+namespace WinterspringLauncher.Utils;
 
 public class FileDownloader : IDisposable
 {

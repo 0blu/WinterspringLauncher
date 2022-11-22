@@ -1,7 +1,8 @@
 ﻿using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
-namespace EverlookClassic.Launcher;
+namespace WinterspringLauncher;
 
 public class LauncherConfig
 {
@@ -9,7 +10,10 @@ public class LauncherConfig
 
     public int ConfigVersion { get; set; } = 1;
 
-    public string GitRepoEverlookClassic { get; set; } = "0blu/EverlookClassicLauncher";
+    [Obsolete("Replaced with 'GitRepoWinterspringLauncher'")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? GitRepoEverlookClassic  { get; set; }
+    public string GitRepoWinterspringLauncher { get; set; } = "0blu/WinterspringLauncher";
     public string GitRepoHermesProxy { get; set; } = "WowLegacyCore/HermesProxy";
     public string GitRepoArctiumLauncher { get; set; } = "Arctium/WoW-Launcher";
 
@@ -31,7 +35,7 @@ public class LauncherConfig
         string jsonString = JsonSerializer.Serialize(this, options);
         File.WriteAllText(configPath, jsonString, Encoding.UTF8);
     }
-    
+
     public static LauncherConfig LoadOrCreateDefault(string configPath)
     {
         LauncherConfig config;
@@ -62,6 +66,11 @@ public class LauncherConfig
 
     private static void PatchConfigIfNeeded(LauncherConfig config)
     {
+#pragma warning disable CS0618
+        if (config.GitRepoEverlookClassic != null)
+            config.GitRepoEverlookClassic = null; // remove old repo from config
+#pragma warning restore CS0618
+
         if (config.ConfigVersion < 2)
         {
             // For future use

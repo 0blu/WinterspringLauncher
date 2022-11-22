@@ -3,7 +3,7 @@ using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace EverlookClassic.Launcher;
+namespace WinterspringLauncher;
 
 public class UpdateApiClient
 {
@@ -30,7 +30,7 @@ public class UpdateApiClient
 
     public GitHubReleaseInfo GetLatestThisLauncherRelease()
     {
-        return GetGitHubReleaseInfo(_config.GitRepoEverlookClassic);
+        return GetGitHubReleaseInfo(_config.GitRepoWinterspringLauncher);
     }
 
     public GitHubReleaseInfo GetLatestHermesProxyRelease()

@@ -1,4 +1,4 @@
-﻿namespace EverlookClassic.Launcher.Utils;
+﻿namespace WinterspringLauncher.Utils;
 
 public class ProgressBarPrinter
 {

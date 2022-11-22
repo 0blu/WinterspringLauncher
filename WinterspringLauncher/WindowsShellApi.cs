@@ -1,7 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace EverlookClassic.Launcher;
+namespace WinterspringLauncher;
 
 public static class WindowsShellApi
 {

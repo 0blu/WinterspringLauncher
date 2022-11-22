@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace EverlookClassic.Launcher.Utils;
+namespace WinterspringLauncher.Utils;
 
 public static class LocalVersion
 {

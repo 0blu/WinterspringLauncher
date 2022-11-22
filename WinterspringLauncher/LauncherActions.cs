@@ -5,10 +5,10 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Xml;
-using EverlookClassic.Launcher.Utils;
 using SevenZip;
+using WinterspringLauncher.Utils;
 
-namespace EverlookClassic.Launcher;
+namespace WinterspringLauncher;
 
 public static class LauncherActions
 {
@@ -17,7 +17,7 @@ public static class LauncherActions
     public static void UpdateThisLauncher(GitHubReleaseInfo releaseInfo)
     {
         Console.WriteLine("A new version was released, please update");
-        Console.WriteLine("https://github.com/0blu/EverlookClassicLauncher/releases");
+        Console.WriteLine("https://github.com/0blu/WinterspringLauncher/releases");
         Thread.Sleep(TimeSpan.FromSeconds(12));
     }
 
@@ -39,26 +39,6 @@ public static class LauncherActions
             return IsCorrectChecksum("_classic_era_/WowClassic.exe", "5e200eafe8bd2ec4baab38f3f66849c9");
     }
 
-    private static void DownloadArctiumIfNecessary(string arctiumPath)
-    {
-        bool IsValidArctiumInstallation(string arctiumPath)
-        {
-            return false;
-        }
-        
-        if (IsValidArctiumInstallation(arctiumPath))
-        {
-            Console.WriteLine($"Arctium found in: {arctiumPath}");
-        }
-        else
-        {
-            Console.WriteLine("Arctium-WoW-Launcher not found!");
-            Console.WriteLine($"Downloading it into {arctiumPath}");
-            Thread.Sleep(TimeSpan.FromSeconds(6));
-            Console.WriteLine(" > Complete");
-        }
-    }
-
     public static void CreateDesktopShortcut()
     {
         try
@@ -72,7 +52,7 @@ public static class LauncherActions
             {
                 Console.WriteLine("Replacing existing Desktop Icon");
             }
-            
+
             string? target = Process.GetCurrentProcess().MainModule?.FileName;
             if (target == null)
             {
@@ -250,7 +230,7 @@ public static class LauncherActions
         }
 
         var assembly = Assembly.GetExecutingAssembly();
-        var resourceName = "EverlookClassic.Launcher.7z.dll";
+        var resourceName = "WinterspringLauncher.7z.dll";
 
         using (Stream stream = assembly.GetManifestResourceStream(resourceName)!)
         {
@@ -364,8 +344,9 @@ public static class LauncherActions
         XmlDocument doc = new XmlDocument();
         doc.Load(hermesConfigPath);
 
+        const string modifiedAttrName = "WinterspringLauncherModified";
         var configNode = doc.DocumentElement!.SelectSingleNode("/configuration")!;
-        XmlNode? alreadyModifiedByUsMarker = configNode.SelectSingleNode("EverlookClassicModified");
+        XmlNode? alreadyModifiedByUsMarker = configNode.SelectSingleNode(modifiedAttrName);
         if (alreadyModifiedByUsMarker == null)
         {
             XmlNode appSettings = configNode.SelectSingleNode("appSettings")!;
@@ -376,7 +357,7 @@ public static class LauncherActions
             XmlNode packetLogNode = appSettings.SelectSingleNode("add[@key='PacketsLog']")!;
             packetLogNode.Attributes!["value"]!.Value = "false";
 
-            var modifiedMarker = doc.CreateElement("EverlookClassicModified");
+            var modifiedMarker = doc.CreateElement(modifiedAttrName);
             modifiedMarker.SetAttribute("comment", "This file might get overwritten when new Hermes update is applied");
             configNode.InsertBefore(modifiedMarker, configNode.FirstChild);
 
