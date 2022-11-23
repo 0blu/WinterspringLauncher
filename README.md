@@ -45,6 +45,7 @@ Here are some working recommendations:
 
 ### Interface
 - [[dl](https://www.curseforge.com/wow/addons/modern-targetframe/download/4024275)] [ModernTargetFrame](https://www.curseforge.com/wow/addons/modern-targetframe) (To see the HP of mobs)
+- [[dl](https://github.com/tukui-org/ElvUI/archive/refs/tags/v1.48-classic.zip)] [ElvUI](https://github.com/tukui-org/ElvUI/releases/tag/v1.48-classic) (slightly older working version)
 
 (Feel free to give me new recommendations to extend the list)
 
