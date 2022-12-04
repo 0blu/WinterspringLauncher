@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System.Diagnostics;
+using System.Globalization;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using WinterspringLauncher.Utils;
@@ -10,10 +11,19 @@ class Launcher
     private const string LEGACY_CONFIG_FILE_NAME = "everlook-classic.json";
     private const string CONFIG_FILE_NAME = "winterspring-launcher-config.json";
     
-    internal static void Main()
+    internal static void Main(string[] args)
     {
         CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
         Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+
+        if (args.Length > 0)
+        {
+            bool exitNow = HandleLauncherUpdateArguments(args);
+            if (exitNow)
+            {
+                return;
+            }
+        }
 
         PrintLogo();
 
@@ -28,7 +38,7 @@ class Launcher
             if (File.Exists(legacyConfigPath))
             {
                 Console.WriteLine($"Renaming old config to {CONFIG_FILE_NAME}");
-                Thread.Sleep(1);
+                Thread.Sleep(TimeSpan.FromSeconds(1));
                 File.Move(legacyConfigPath, configPath);
             }
         });
@@ -37,7 +47,8 @@ class Launcher
         var api = new UpdateApiClient(config);
 
         Thread.Sleep(TimeSpan.FromSeconds(1));
-        IgnoreExceptions("update launcher", () => UpdateThisLauncherIfNecessary(api));
+        bool weAreOnMacOs = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
+        IgnoreExceptions("update launcher", () => UpdateThisLauncherIfNecessary(api, weAreOnMacOs, onlyNotify: !config.AutoUpdateThisLauncher));
 
         if (config.RecreateDesktopShortcut)
         {
@@ -54,8 +65,6 @@ class Launcher
         EnsureDirectoryExists(hermesPath);
         EnsureDirectoryExists(arctiumPath);
 
-        bool weAreOnMacOs = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
-
         IgnoreExceptions("prepare game", () => PrepareGame(api, weAreOnMacOs, gamePath));
         IgnoreExceptions("prepare HermesProxy", () => PrepareHermes(api, weAreOnMacOs, hermesPath));
         IgnoreExceptions("prepare ArctiumLauncher", () => PrepareArctiumLauncher(api, weAreOnMacOs, arctiumPath));
@@ -68,7 +77,7 @@ class Launcher
         LauncherActions.StartHermesProxyAndWaitTillEnd(hermesPath);
     }
 
-    private static void UpdateThisLauncherIfNecessary(UpdateApiClient api)
+    private static void UpdateThisLauncherIfNecessary(UpdateApiClient api, bool weAreOnMacOs, bool onlyNotify)
     {
         Version myVersion = Assembly.GetExecutingAssembly().GetName().Version!;
         string myVersionStr = $"{myVersion.Major}.{myVersion.Minor}.{myVersion.Build}";
@@ -80,8 +89,17 @@ class Launcher
             if (newVersion > myVersion)
             {
                 Console.WriteLine($"New launcher update {myVersionStr} => {latestLauncherVersion.TagName}");
-                // This function might not return because it updates the launcher in-place
-                LauncherActions.UpdateThisLauncher(latestLauncherVersion);
+                if (onlyNotify)
+                {
+                    Console.WriteLine("A new version was released, please update");
+                    Console.WriteLine("https://github.com/0blu/WinterspringLauncher/releases");
+                    Thread.Sleep(TimeSpan.FromSeconds(12));
+                }
+                else
+                {
+                    // This function might not return because it updates the launcher in-place
+                    LauncherActions.UpdateThisLauncher(weAreOnMacOs, latestLauncherVersion);
+                }
             }
         }
     }
@@ -279,5 +297,83 @@ class Launcher
         Console.WriteLine("       .,,,,,,,,,,,,,,,");
         Console.ForegroundColor = pre;
         Console.WriteLine("");
+    }
+
+    private static bool/*exitNow*/ HandleLauncherUpdateArguments(string[] args)
+    {
+        if (args.Length != 2)
+        {
+            Console.WriteLine($"AutoUpdate: Error invalid arguments [{string.Join(", ", args.Select(x => $"\"{x}\""))}]");
+            return true;
+        }
+
+        var actionName = args[0];
+        var targetPath = args[1];
+        if (string.IsNullOrWhiteSpace(targetPath))
+        {
+            Console.WriteLine("AutoUpdate: Target path is empty");
+            return true;
+        }
+
+        // Launcher update order:
+        // - launcher detects an update
+        // - downloads update into tmp file
+        // - starts tmp file with "--copy-self-to <launcherPath>"
+        // - launcher kills itself
+        // - tmp file will copy itself to launcher
+        // - tmp file will start launcher with "--delete-tmp-updater-file <tmpFile>"
+        // - launcher tries to delete tmpFile and does a regular start
+        if (actionName == "--copy-self-to")
+        {
+            Console.WriteLine($"Updating launcher '{targetPath}'");
+            var ourPath = Process.GetCurrentProcess().MainModule!.FileName!;
+            bool wasSuccessful = false;
+            for (int i = 0; i < 20; i++)
+            {
+                try
+                {
+                    File.Copy(ourPath, targetPath, overwrite: true);
+                    wasSuccessful = true;
+                }
+                catch(IOException)
+                {
+                    Console.WriteLine("Need to wait for old process to close (this might take a bit)");
+                    Thread.Sleep(TimeSpan.FromMilliseconds(500));
+                }
+            }
+
+            if (!wasSuccessful)
+            {
+                Console.WriteLine("Update was not successful, please try again or update manually");
+                Thread.Sleep(TimeSpan.FromSeconds(10));
+                return true;
+            }
+
+            Console.WriteLine("Start new launcher");
+            Process.Start(new ProcessStartInfo{
+                FileName = targetPath,
+                Arguments = $"--delete-tmp-updater-file \"{ourPath}\"",
+                UseShellExecute = true,
+            });
+        }
+        else if (actionName == "--delete-tmp-updater-file")
+        {
+            Thread.Sleep(TimeSpan.FromMilliseconds(500));
+            try
+            {
+                Console.WriteLine($"Removing tmp file '{targetPath}'");
+                File.Delete(targetPath);
+            }
+            catch
+            {
+                // Ignore
+            }
+            return false;
+        }
+        else
+        {
+            Console.WriteLine($"AutoUpdate: Unknown action as arguments [{string.Join(", ", args.Select(x => $"\"{x}\""))}]");
+        }
+        return true;
     }
 }

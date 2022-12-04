@@ -12,13 +12,39 @@ namespace WinterspringLauncher;
 
 public static class LauncherActions
 {
-    private const string TMP_ARCHIVE_NAME_GAME = "__tmp__game-client_wow_1.14.0.40618.rar";
+    public const string TMP_ARCHIVE_NAME_GAME = "__tmp__game-client_wow_1.14.0.40618.rar";
 
-    public static void UpdateThisLauncher(GitHubReleaseInfo releaseInfo)
+    public static void UpdateThisLauncher(bool weAreOnMacOs, GitHubReleaseInfo releaseInfo)
     {
-        Console.WriteLine("A new version was released, please update");
-        Console.WriteLine("https://github.com/0blu/WinterspringLauncher/releases");
-        Thread.Sleep(TimeSpan.FromSeconds(12));
+        // C# can only create temp files with a fixed suffix, but we might want to have ".exe" at the end
+        var rawTempFilePath = Path.GetTempFileName();
+        try { File.Delete(rawTempFilePath); } catch {/*ignore*/}
+        var tempFilePath = Path.ChangeExtension(rawTempFilePath, weAreOnMacOs ? "WinterspringLauncher" : "WinterspringLauncher.exe");
+
+        var selectedAsset = releaseInfo.Assets!.Single(a => a.Name.Contains("WinterspringLauncher") && (a.Name.Contains(".exe") != weAreOnMacOs));
+        var downloadUrl = selectedAsset.DownloadUrl;
+
+        Console.WriteLine($"Downloading new version: {downloadUrl}");
+        Console.WriteLine($"Into file: {tempFilePath}");
+
+        DownloadFile(downloadUrl, tempFilePath);
+
+        Console.WriteLine("Going to start tmp file in copy mode to replace the following path");
+        var ourPath = Process.GetCurrentProcess().MainModule!.FileName!;
+        Console.WriteLine($"Replace: '{ourPath}'");
+        Thread.Sleep(TimeSpan.FromSeconds(3));
+        var process = Process.Start(new ProcessStartInfo{
+            FileName = tempFilePath,
+            Arguments = $"--copy-self-to \"{ourPath}\"",
+            UseShellExecute = true,
+        });
+        Thread.Sleep(TimeSpan.FromMilliseconds(200));
+        if (process == null || process.HasExited)
+        {
+            throw new Exception("The tmp updater has exited prematurely");
+        }
+
+        Environment.Exit(0);
     }
 
     public static bool CheckGameIntegrity(string fullGamePath, bool macBuild)
@@ -223,7 +249,7 @@ public static class LauncherActions
         {
             // TODO: How to unrar a file on macos?
             Console.WriteLine($"Please extract {TMP_ARCHIVE_NAME_GAME} into {gamePath} and skip the 'World of Warcraft' folder name");
-            Thread.Sleep(1);
+            Thread.Sleep(TimeSpan.FromSeconds(1));
             Console.ReadLine();
             Environment.Exit(1);
         }

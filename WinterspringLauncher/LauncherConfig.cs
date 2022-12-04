@@ -24,6 +24,7 @@ public class LauncherConfig
     public string GamePath { get; set; } = "./game-client";
     public string ArctiumLauncherPath { get; set; } = "./arctium-launcher";
     public bool RecreateDesktopShortcut { get; set; } = true;
+    public bool AutoUpdateThisLauncher { get; set; } = false;
 
     public string Realmlist { get; set; } = "logon.everlook.org";
 
