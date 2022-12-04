@@ -363,6 +363,74 @@ public static class LauncherActions
         File.Delete(tempFilePath);
     }
 
+    public static void PrepareHermesProxyData(string hermesPath)
+    {
+        var assembly = Assembly.GetExecutingAssembly();
+        var allResources = assembly.GetManifestResourceNames();
+
+        var baseCsvResources = allResources.Where(r => r.StartsWith("WinterspringLauncher.HermesDataPatches.") && !r.StartsWith("WinterspringLauncher.HermesDataPatches.Hotfix")).ToList();
+        var hotfixCsvResources = allResources.Where(r => r.StartsWith("WinterspringLauncher.HermesDataPatches.Hotfix")).ToList();
+        PatchCsvFiles(baseCsvResources, "WinterspringLauncher.HermesDataPatches.", Path.Combine(hermesPath, "CSV"));
+        PatchCsvFiles(hotfixCsvResources, "WinterspringLauncher.HermesDataPatches.Hotfix.", Path.Combine(hermesPath, "CSV", "Hotfix"));
+
+        var modifiedByUsFilePath = Path.Combine(hermesPath, "CSV", "_WinterspringLauncherModified.txt");
+        if (!File.Exists(modifiedByUsFilePath))
+            File.WriteAllText(modifiedByUsFilePath, "The CSV files where updated by WinterspringLauncher");
+
+        void PatchCsvFiles(List<string> patchResources, string replace, string csvDirPath)
+        {
+            foreach (var patchResource in patchResources)
+            {
+                var fileName = patchResource.ReplaceFirstOccurrence(replace, "");
+                var dstFilePath = Path.Combine(csvDirPath, fileName);
+
+                List<string> patches = new List<string>();
+                using (Stream stream = assembly.GetManifestResourceStream(patchResource)!)
+                using (StreamReader reader = new StreamReader(stream))
+                {
+                    while (!reader.EndOfStream)
+                    {
+                        var currentLine = reader.ReadLine();
+                        if (currentLine == null)
+                            break;
+                        patches.Add(currentLine);
+                    }
+                }
+
+                if (!File.Exists(dstFilePath))
+                {
+                    Console.WriteLine($"Unable to patch '{dstFilePath}' ({patchResource})");
+                    Thread.Sleep(TimeSpan.FromSeconds(5));
+                }
+                
+                var allLinesInCsv = File.ReadAllLines(dstFilePath).ToList();
+
+                bool wasPatched = false;
+                foreach (var patch in patches)
+                {
+                    if (patch.StartsWith("REMOVE!"))
+                    {
+                        var clearPatch = patch.Substring("REMOVE!".Length);
+                        int amountRemoved = allLinesInCsv.RemoveAll((l) => l == clearPatch);
+                        if (amountRemoved > 0)
+                            wasPatched = true;
+                    }
+                    if (!allLinesInCsv.Contains(patch))
+                    {
+                        allLinesInCsv.Add(patch);
+                        wasPatched = true;
+                    }
+                }
+
+                if (wasPatched)
+                {
+                    Console.WriteLine($"Applying patch to '{dstFilePath}' ({patchResource})");
+                    File.WriteAllLines(dstFilePath, allLinesInCsv);
+                }
+            }
+        }
+    }
+
     public static void PrepareHermesProxyConfig(string hermesPath, string realmlist)
     {
         var hermesConfigPath = Path.Combine(hermesPath, "HermesProxy.config");

@@ -70,10 +70,11 @@ class Launcher
         IgnoreExceptions("prepare ArctiumLauncher", () => PrepareArctiumLauncher(api, weAreOnMacOs, arctiumPath));
 
         LauncherActions.PrepareGameConfigWtf(gamePath);
-        LauncherActions.StartGameViaArctium(gamePath, arctiumPath);
 
-        string realmlist = config.Realmlist;
-        LauncherActions.PrepareHermesProxyConfig(hermesPath, realmlist);
+        IgnoreExceptions("prepare HermesProxy Data", () => LauncherActions.PrepareHermesProxyData(hermesPath));
+        LauncherActions.PrepareHermesProxyConfig(hermesPath, config.Realmlist);
+
+        LauncherActions.StartGameViaArctium(gamePath, arctiumPath);
         LauncherActions.StartHermesProxyAndWaitTillEnd(hermesPath);
     }
 
