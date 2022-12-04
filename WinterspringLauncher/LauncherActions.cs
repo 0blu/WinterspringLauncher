@@ -23,20 +23,18 @@ public static class LauncherActions
 
     public static bool CheckGameIntegrity(string fullGamePath, bool macBuild)
     {
-        bool IsCorrectChecksum(string subPath, string expectedHash)
-        {     
-            var toBeHashedPath = Path.Combine(fullGamePath, subPath);
-            if (!File.Exists(toBeHashedPath))
-                return false;
-
-            string actualHash = CreateMd5Checksum(toBeHashedPath);
-            return actualHash == expectedHash;
-        }
-
+        // Allow custom clients by just checking the size and not the checksum
         if (macBuild)
+        {
             throw new NotImplementedException("MacOs Build");
+        }
         else
-            return IsCorrectChecksum("_classic_era_/WowClassic.exe", "5e200eafe8bd2ec4baab38f3f66849c9");
+        {
+            var wowClassicExe = new FileInfo(Path.Combine(fullGamePath, "_classic_era_/WowClassic.exe"));
+            if (!wowClassicExe.Exists)
+                return false;
+            return wowClassicExe.Length > (20 * 1024 * 1024); // should be more than 20 MiB
+        }
     }
 
     public static void CreateDesktopShortcut()
