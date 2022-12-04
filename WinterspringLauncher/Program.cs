@@ -99,6 +99,7 @@ class Launcher
         {
             Console.WriteLine(e);
             Console.WriteLine($">>> Failed to {description}, continuing anyways <<<");
+            Thread.Sleep(TimeSpan.FromSeconds(10));
         }
 #endif
     }
@@ -182,7 +183,22 @@ class Launcher
             if (!LauncherActions.ContainsValidGameZip())
             {
                 var gameDownloadSource = api.GetWindowsGameDownloadSource();
-                LauncherActions.DownloadGameClientZip(gameDownloadSource);
+                try
+                {
+                    LauncherActions.DownloadGameClientZip(gameDownloadSource);
+                }
+                catch
+                {
+                    Console.WriteLine("Failed to download the game client :(");
+                    Console.WriteLine("Is your provider blocking the download?");
+                    Console.WriteLine("Please try to download it manually");
+                    Console.WriteLine(gameDownloadSource);
+                    Console.WriteLine($"And place it as {LauncherActions.TMP_ARCHIVE_NAME_GAME}");
+                    Console.WriteLine();
+                    Console.WriteLine("Script is going to wait for 30 sec and then tries to continue (might be broken)");
+                    Thread.Sleep(TimeSpan.FromSeconds(30));
+                    throw;
+                }
             }
 
             LauncherActions.ExtractGameClient(gamePath, onlyData: weAreOnMacOs);
