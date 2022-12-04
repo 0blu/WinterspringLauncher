@@ -183,6 +183,7 @@ public static class LauncherActions
         var process = Process.Start(new ProcessStartInfo{
             FileName = executablePath,
             WorkingDirectory = hermesPath,
+            Arguments = "--no-version-check",
         });
         process?.WaitForExit();
 
