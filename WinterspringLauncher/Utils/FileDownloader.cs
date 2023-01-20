@@ -1,4 +1,5 @@
-﻿using System.Timers;
+﻿using System.Globalization;
+using System.Timers;
 
 namespace WinterspringLauncher.Utils;
 
@@ -31,12 +32,28 @@ public class FileDownloader : IDisposable
     {
         _downloadUrl = downloadUrl;
         _destinationFilePath = destinationFilePath;
-        _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+        _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
         _updateTimer = new System.Timers.Timer(500 /*ms*/);
         _updateTimer.Elapsed += TimerElapsed;
     }
 
-    public async Task StartDownload()
+    public async Task StartPostUploadFileAndDownload(Stream uploadedFile)
+    {
+        _httpClient.Timeout = Timeout.InfiniteTimeSpan;
+        using var content = new MultipartFormDataContent("Upload----" + DateTime.Now.ToString(CultureInfo.InvariantCulture));
+
+        ProgressBarPrinter uploadProgress = new ProgressBarPrinter("Patching");
+        content.Add(new StreamContent(uploadProgress.FromStream(uploadedFile)), "file", "file");
+
+        var request = new HttpRequestMessage(HttpMethod.Post, _downloadUrl);
+        request.Content = content;
+
+        using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        uploadProgress.Done();
+        await DownloadFileFromHttpResponseMessage(response);
+    }
+
+    public async Task StartGetDownload()
     {
         using (var response = await _httpClient.GetAsync(_downloadUrl, HttpCompletionOption.ResponseHeadersRead))
             await DownloadFileFromHttpResponseMessage(response);

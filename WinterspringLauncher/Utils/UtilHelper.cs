@@ -28,4 +28,20 @@ public static class UtilHelper
         return result;
     }
 
+
+    public delegate bool CopyFolderFilterDelegate(string srcFileName);
+    
+    public static void CopyFolderRecursively(string srcFolder, string dstFolder, CopyFolderFilterDelegate? filter = null)
+    {
+        foreach (var srcFilePath in Directory.GetFiles(srcFolder, "*", SearchOption.AllDirectories))
+        {
+            var relPath = Path.GetRelativePath(srcFolder, srcFilePath);
+            var dstFilePath = Path.Combine(dstFolder, relPath);
+            if (filter?.Invoke(srcFilePath) ?? true)
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(dstFilePath)!);
+                File.Copy(srcFilePath, dstFilePath, overwrite: true);
+            }
+        }
+    }
 }

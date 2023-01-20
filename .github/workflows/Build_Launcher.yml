@@ -3,10 +3,10 @@ name: Build Launcher
 on: ['push']
 
 env:
-  DOTNET_VERSION: '6.0.x'
+  DOTNET_VERSION: '7.0.x'
 
 jobs:
-  build:
+  build_windows:
     strategy:
       matrix:
         os: ['windows']
@@ -37,4 +37,61 @@ jobs:
         with:
           name: WinterspringLauncher-${{ matrix.os }}-${{ runner.arch }}-${{ github.sha }}
           path: publish
+          if-no-files-found: error
+
+  build_macos:
+    strategy:
+      matrix:
+        os: ['macos']
+    runs-on: ${{ matrix.os }}-latest
+
+    steps:
+      - name: Checkout repository content
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET Core SDK
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install dependencies
+        run: dotnet restore
+
+      - name: Publish
+        run: dotnet publish --configuration Release --runtime osx-arm64 -p:UsePublishBuildSettings=true
+
+      - name: Determinante tag
+        run: echo "GIT_TAG=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
+
+      - name: Create .app
+        working-directory: MacAppBuilding
+        run: ./build_app.sh "$GIT_TAG" ../WinterspringLauncher/bin/Release/*/publish/WinterspringLauncher
+
+      - name: Create .app zip
+        working-directory: MacAppBuilding
+        run: |
+          cd output
+          zip -vr ../../WinterspringLauncher-${{ matrix.os }}-arm64-${{ github.sha }}-APP.zip *
+
+      - name: Upload .app
+        uses: actions/upload-artifact@v3
+        with:
+          name: WinterspringLauncher-${{ matrix.os }}-arm64-${{ github.sha }}.app
+          path: WinterspringLauncher-${{ matrix.os }}-arm64-${{ github.sha }}-APP.zip
+          if-no-files-found: error
+
+      - name: Install create-dmg
+        run: brew install create-dmg
+
+      - name: Create .dmg
+        working-directory: MacAppBuilding
+        run: ./build_dmg.sh
+
+      - name: Upload .dmg
+        uses: actions/upload-artifact@v3
+        with:
+          name: WinterspringLauncher-${{ matrix.os }}-arm64-${{ github.sha }}.dmg
+          path: MacAppBuilding/output_dmg/
           if-no-files-found: error
