@@ -70,4 +70,58 @@ public class ProgressBarPrinter
         return amount >= 0.5 ? '▌' : ' ';
     }
 
+    public Stream FromStream(Stream inputStream)
+    {
+        return new StreamWrapper(inputStream, this);
+    }
+
+    private class StreamWrapper : Stream
+    {
+        private readonly Stream _stream;
+        private readonly ProgressBarPrinter _progress;
+
+        public StreamWrapper(Stream stream, ProgressBarPrinter progress)
+        {
+            _stream = stream;
+            _progress = progress;
+        }
+        
+        
+        public override void Flush()
+        {
+            _stream.Flush();
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            int actualCount = _stream.Read(buffer, offset, count);
+            _progress.UpdateState(_stream.Position / (double)_stream.Length, "");
+            return actualCount;
+        }
+
+        public override long Seek(long offset, SeekOrigin origin)
+        {
+            return _stream.Seek(offset, origin);
+        }
+
+        public override void SetLength(long value)
+        { 
+            _stream.SetLength(value);
+        }
+
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            _stream.Write(buffer, offset, count);
+        }
+
+        public override bool CanRead => _stream.CanRead;
+        public override bool CanSeek => _stream.CanSeek;
+        public override bool CanWrite => _stream.CanWrite;
+        public override long Length => _stream.Length;
+        public override long Position
+        {
+            get => _stream.Position;
+            set => _stream.Position = value;
+        }
+    }
 }

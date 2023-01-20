@@ -4,18 +4,23 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
+using System.Web;
 using System.Xml;
-using SevenZip;
 using WinterspringLauncher.Utils;
 
 namespace WinterspringLauncher;
 
 public static class LauncherActions
 {
-    public const string TMP_ARCHIVE_NAME_GAME = "__tmp__game-client_wow_1.14.0.40618.rar";
+    public static string TmpGameArchiveName => RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
+        ? "__tmp__game-client.zip"
+        : "__tmp__game-client.rar";
 
     public static void UpdateThisLauncher(bool weAreOnMacOs, GitHubReleaseInfo releaseInfo)
     {
+        if (weAreOnMacOs)
+            throw new Exception("Autoupdate of the launcher is not yet supported on MacOS");
+
         // C# can only create temp files with a fixed suffix, but we might want to have ".exe" at the end
         var rawTempFilePath = Path.GetTempFileName();
         try { File.Delete(rawTempFilePath); } catch {/*ignore*/}
@@ -47,20 +52,15 @@ public static class LauncherActions
         Environment.Exit(0);
     }
 
-    public static bool CheckGameIntegrity(string fullGamePath, bool macBuild)
+    public static bool CheckGameIntegrity(string gamePath, bool macBuild)
     {
+        string filePath = GetGameExecutableFilePath(gamePath, macBuild, patched: macBuild);
+        var wowClassicExe = new FileInfo(filePath);
+        if (!wowClassicExe.Exists)
+            return false;
+
         // Allow custom clients by just checking the size and not the checksum
-        if (macBuild)
-        {
-            throw new NotImplementedException("MacOs Build");
-        }
-        else
-        {
-            var wowClassicExe = new FileInfo(Path.Combine(fullGamePath, "_classic_era_/WowClassic.exe"));
-            if (!wowClassicExe.Exists)
-                return false;
-            return wowClassicExe.Length > (20 * 1024 * 1024); // should be more than 20 MiB
-        }
+        return wowClassicExe.Length > (25 * 1024 * 1024); // should be more than 25 MiB
     }
 
     public static void CreateDesktopShortcut()
@@ -113,7 +113,7 @@ public static class LauncherActions
                 progressBar.Done();
             };
 
-            client.StartDownload().Wait();
+            client.StartGetDownload().Wait();
         }
     }
 
@@ -165,7 +165,54 @@ public static class LauncherActions
         }
     }
 
-    public static void StartGameViaArctium(string gamePath, string arctiumPath)
+    public static Process StartPatchedGameDirectly(string gamePath, bool weAreOnMacOs)
+    {
+        var executablePath = GetGameExecutableFilePath(gamePath, weAreOnMacOs, true);
+
+        Console.WriteLine("Starting WoW...");
+
+        ProcessStartInfo startInfo;
+        if (weAreOnMacOs)
+        {
+            startInfo = new ProcessStartInfo
+            {
+                FileName = "/usr/bin/open",
+                ArgumentList = { "--new", "--wait-apps", "./WoW Fixed.app" },
+                WorkingDirectory = Path.Combine(gamePath, "_classic_era_"),
+                UseShellExecute = true,
+                CreateNoWindow = false,
+                RedirectStandardError = false,
+                RedirectStandardInput = false,
+                RedirectStandardOutput = false,
+            };
+        }
+        else
+        {
+            startInfo = new ProcessStartInfo
+            {
+                FileName = executablePath,
+                WorkingDirectory = Path.GetDirectoryName(executablePath),
+                UseShellExecute = true,
+                CreateNoWindow = false,
+                RedirectStandardError = false,
+                RedirectStandardInput = false,
+                RedirectStandardOutput = false,
+            };
+        }
+
+        startInfo.EnvironmentVariables.Clear();
+        var process = Process.Start(startInfo)!;
+
+        Thread.Sleep(TimeSpan.FromSeconds(2.5));
+        if (process.HasExited)
+        {
+            ColorConsole.Yellow("Error: Somehow the game exited prematurely");
+        }
+
+        return process;
+    }
+
+    public static Process StartGameViaArctium(string gamePath, string arctiumPath)
     {
         bool weAreOnMacOs = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
 
@@ -183,19 +230,80 @@ public static class LauncherActions
             UseShellExecute = true,
         })!;
 
-        Thread.Sleep(1);
+        Thread.Sleep(TimeSpan.FromSeconds(1));
         if (process.HasExited)
         {
-            Console.WriteLine("Error: Somehow ArctiumLauncher exited prematurely");
+            ColorConsole.Yellow("Error: Somehow ArctiumLauncher exited prematurely");
+            Thread.Sleep(TimeSpan.FromSeconds(3));
         }
+
+        return null!;
     }
 
-    public static void DownloadAndApplyMacOsPatches(string gamePath)
+    public static void PatchGameClient(string gamePath, bool macBuild, string patcherUrl)
     {
-        throw new NotImplementedException("TODO MacOS support");
+        if (!macBuild)
+            throw new Exception("Patching is currently only supported on MacOS");
+
+        UtilHelper.CopyFolderRecursively(
+            srcFolder: Path.Combine(gamePath, "_classic_era_", "World of Warcraft Classic.app"),
+            dstFolder: Path.Combine(gamePath, "_classic_era_", "WoW Fixed.app"),
+            (file) => !file.Contains("Contents/MacOS/World of Warcraft Classic") && !file.Contains("Contents/_CodeSignature"));
+
+        var plistPath = Path.Combine(gamePath, "_classic_era_", "WoW Fixed.app", "Contents", "info.plist");
+        var plistContent = File.ReadAllText(plistPath);
+        var newPlistContent = plistContent
+            .Replace("CFBundleSupportedPlatforms", "CFBundleSupportedPlatformsLegacy")
+            .Replace("World of Warcraft Classic", "wow_fixed");
+        File.WriteAllText(plistPath, newPlistContent);
+
+        var originalExecutablePath = GetGameExecutableFilePath(gamePath, macBuild, patched: false);
+        var patchedExecutablePath = GetGameExecutableFilePath(gamePath, macBuild, patched: macBuild);
+
+        Directory.CreateDirectory(Path.GetDirectoryName(patchedExecutablePath)!);
+        Console.WriteLine("Patching game client to allow custom connections");
+        Console.WriteLine("This process should not take >5 min.");
+        ColorConsole.Yellow("If the estimated time is extremely high, try to restart the launcher");
+
+        var url = new UriBuilder(patcherUrl);
+        var query = HttpUtility.ParseQueryString(url.Query);
+        query.Add("static-seed", "true");
+        url.Query = query.ToString();
+        using var downloader = new FileDownloader(url.ToString(), patchedExecutablePath);
+
+        using var fileStream = File.OpenRead(originalExecutablePath);
+
+        downloader.InitialInfo += (totalFileSize) => {
+            Console.WriteLine($"Download size {UtilHelper.ToHumanFileSize(totalFileSize ?? -1)}");
+        };
+
+        ProgressBarPrinter progressBar = new ProgressBarPrinter("Download");
+        downloader.ProgressChangedFixedDelay += (totalFileSize, totalBytesDownloaded, bytePerSec) => {
+            double progress = ((double)totalBytesDownloaded) / (totalFileSize ?? 1);
+            string dataRatePerSec = UtilHelper.ToHumanFileSize(bytePerSec);
+            progressBar.UpdateState(progress, $"{dataRatePerSec}/s".PadRight(11));
+        };
+
+        downloader.DownloadDone += () => {
+            progressBar.Done();
+        };
+
+        downloader.StartPostUploadFileAndDownload(fileStream).Wait();
+        UnixApi.chmod(patchedExecutablePath, UnixApi.PERM_0777);
     }
 
-    public static void StartHermesProxyAndWaitTillEnd(string hermesPath)
+    private static string GetGameExecutableFilePath(string gamePath, bool macBuild, bool patched)
+    {
+        return (macBuild, patched) switch
+        {
+            (false, false) => Path.Combine(gamePath, "_classic_era_", "WowClassic.exe"),
+            (false, true) => Path.Combine(gamePath, "_classic_era_", "WowClassic_patched.exe"),
+            (true, false) => Path.Combine(gamePath, "_classic_era_", "World of Warcraft Classic.app", "Contents", "MacOS", "World of Warcraft Classic"),
+            (true, true) => Path.Combine(gamePath, "_classic_era_", "WoW Fixed.app", "Contents", "MacOS", "wow_fixed"),
+        };
+    }
+
+    public static Process StartHermesProxyAndWaitTillEnd(string hermesPath)
     {
         bool weAreOnMacOs = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
 
@@ -211,23 +319,19 @@ public static class LauncherActions
             WorkingDirectory = hermesPath,
             Arguments = "--no-version-check",
         });
-        process?.WaitForExit();
 
-        Console.WriteLine("Hermes Proxy has exited?");
-        Console.WriteLine("Please report any errors to https://github.com/WowLegacyCore/HermesProxy");
-        Thread.Sleep(2);
-        Console.WriteLine("Press any key to close");
-        Console.ReadLine();
+        return process;
     }
 
-    public static bool ContainsValidGameZip()
+    public static bool ContainsValidGameZip(bool weAreOnMacOs)
     {
-        string downloadedFile = Path.Combine("__tmp__game-client_wow_1.14.0.40618.rar");
+        string downloadedFile = Path.Combine(TmpGameArchiveName);
         if (!File.Exists(downloadedFile))
             return false;
 
         long existingFileLength = new FileInfo(downloadedFile).Length;
-        return existingFileLength == 8004342849;
+        long expectedFileLength = weAreOnMacOs ? 8611510296 : 8004342849;
+        return existingFileLength == expectedFileLength;
     }
 
     public static void DownloadGameClientZip((string? provider, string downloadUrl) downloadSource)
@@ -239,86 +343,17 @@ public static class LauncherActions
 
         Console.WriteLine("Placing temporary download file alongside launcher");
         Thread.Sleep(TimeSpan.FromSeconds(1));
-        DownloadFile(downloadSource.downloadUrl, Path.Combine(TMP_ARCHIVE_NAME_GAME));
+        DownloadFile(downloadSource.downloadUrl, Path.Combine(TmpGameArchiveName));
     }
 
-    public static void ExtractGameClient(string gamePath, bool onlyData)
+    public static void ExtractGameClient(string gamePath)
     {
-        bool weAreOnMacOs = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
-        if (weAreOnMacOs)
-        {
-            // TODO: How to unrar a file on macos?
-            Console.WriteLine($"Please extract {TMP_ARCHIVE_NAME_GAME} into {gamePath} and skip the 'World of Warcraft' folder name");
-            Thread.Sleep(TimeSpan.FromSeconds(1));
-            Console.ReadLine();
-            Environment.Exit(1);
-        }
-
-        var assembly = Assembly.GetExecutingAssembly();
-        var resourceName = "WinterspringLauncher.7z.dll";
-
-        using (Stream stream = assembly.GetManifestResourceStream(resourceName)!)
-        {
-            try
-            {
-                using (var file = File.Open("7z.dll", FileMode.Create, FileAccess.Write))
-                {
-                    stream.CopyTo(file);
-                }
-            }
-            catch(Exception e)
-            {
-                // Maybe the file is somehow already in use
-                Console.WriteLine("Failed to write 7z.dll");
-                Console.WriteLine(e);
-            }
-        }
-
-        SevenZipBase.SetLibraryPath("7z.dll");
-        string downloadedFile = Path.Combine(TMP_ARCHIVE_NAME_GAME);
-        Console.WriteLine($"Extracting archive into {gamePath}");
-        using (var archiveFile = new SevenZipExtractor(downloadedFile))
-        {
-            var decompressProgress = new ProgressBarPrinter("Decompress");
-            bool ShouldBeDecompressed(ArchiveFileInfo entry) => !entry.IsDirectory;
-            string ToPath(string path) => path.ReplaceFirstOccurrence("World of Warcraft", gamePath);
-
-            long totalSize = 0;
-            long totalCount = 0;
-            foreach (var entry in archiveFile.ArchiveFileData)
-            {
-                if (ShouldBeDecompressed(entry))
-                {
-                    totalSize += (long) entry.Size;
-                    totalCount++;
-                }
-            }
-            Console.WriteLine($"Total size to decompress {UtilHelper.ToHumanFileSize(totalSize)}");
-
-            long alreadyDecompressedSize = 0;
-            long alreadyDecompressedCount = 0;
-            foreach (var entry in archiveFile.ArchiveFileData)
-            {
-                if (ShouldBeDecompressed(entry))
-                {
-                    var destName = ToPath(entry.FileName);
-                    Directory.CreateDirectory(Path.GetDirectoryName(destName)!);
-                    using (var fStream = File.Open(destName, FileMode.Create, FileAccess.Write))
-                    {
-                        archiveFile.ExtractFile(entry.FileName, fStream);
-                    }
-                    alreadyDecompressedSize += (long) entry.Size;
-                    alreadyDecompressedCount++;
-                    decompressProgress.UpdateState((alreadyDecompressedSize / (double)(totalSize)), $"{alreadyDecompressedCount}/{totalCount}".PadLeft(3+1+3));
-                }
-            }
-            decompressProgress.Done();
-        }
+        ArchiveCompression.DecompressWithProgress(TmpGameArchiveName, gamePath);
     }
 
     public static void RemoveTempGameClientZip()
     {
-        string downloadedFile = Path.Combine(TMP_ARCHIVE_NAME_GAME);
+        string downloadedFile = Path.Combine(TmpGameArchiveName);
 
         Console.WriteLine("Removing temporary archive");
         Thread.Sleep(TimeSpan.FromSeconds(2));
@@ -348,7 +383,7 @@ public static class LauncherActions
         var tempFilePath = "__tmp__hermes.zip";
         DownloadFile(downloadUrl, tempFilePath);
 
-        ZipFile.ExtractToDirectory(tempFilePath, hermesPath);
+        ArchiveCompression.DecompressSmartSkipFirstFolder(tempFilePath, hermesPath);
         File.Delete(tempFilePath);
     }
 

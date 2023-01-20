@@ -2,13 +2,14 @@
 using System.Globalization;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Xml;
+using System.Xml.Linq;
 using WinterspringLauncher.Utils;
 
 namespace WinterspringLauncher;
 
 class Launcher
 {
-    private const string LEGACY_CONFIG_FILE_NAME = "everlook-classic.json";
     private const string CONFIG_FILE_NAME = "winterspring-launcher-config.json";
     
     internal static void Main(string[] args)
@@ -27,30 +28,25 @@ class Launcher
 
         PrintLogo();
 
+        bool weAreOnMacOs = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
+        if (weAreOnMacOs)
+        {
+            string home = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "WinterspringLauncher");
+            Directory.CreateDirectory(home);
+            Environment.CurrentDirectory = home;
+        }
         var baseFolder = Path.GetFullPath(".");
         Console.WriteLine($"BasePath: {baseFolder}");
         string FullPath(string subPath) => Path.GetFullPath(Path.Combine(baseFolder, subPath));
 
         string configPath = Path.Combine(baseFolder, CONFIG_FILE_NAME);
-        // Convert legacy config into new one
-        IgnoreExceptions("rename old config", () => {
-            string legacyConfigPath = Path.Combine(baseFolder, LEGACY_CONFIG_FILE_NAME);
-            if (File.Exists(legacyConfigPath))
-            {
-                Console.WriteLine($"Renaming old config to {CONFIG_FILE_NAME}");
-                Thread.Sleep(TimeSpan.FromSeconds(1));
-                File.Move(legacyConfigPath, configPath);
-            }
-        });
-
         var config = LoadConfig(configPath);
         var api = new UpdateApiClient(config);
 
         Thread.Sleep(TimeSpan.FromSeconds(1));
-        bool weAreOnMacOs = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
         IgnoreExceptions("update launcher", () => UpdateThisLauncherIfNecessary(api, weAreOnMacOs, onlyNotify: !config.AutoUpdateThisLauncher));
 
-        if (config.RecreateDesktopShortcut)
+        if (config.RecreateDesktopShortcut && !weAreOnMacOs)
         {
             LauncherActions.CreateDesktopShortcut();
             config.RecreateDesktopShortcut = false;
@@ -63,23 +59,63 @@ class Launcher
 
         EnsureDirectoryExists(gamePath);
         EnsureDirectoryExists(hermesPath);
-        EnsureDirectoryExists(arctiumPath);
+        if (!weAreOnMacOs)
+            EnsureDirectoryExists(arctiumPath);
 
         IgnoreExceptions("prepare game", () => PrepareGame(api, weAreOnMacOs, gamePath));
         IgnoreExceptions("prepare HermesProxy", () => PrepareHermes(api, weAreOnMacOs, hermesPath));
-        IgnoreExceptions("prepare ArctiumLauncher", () => PrepareArctiumLauncher(api, weAreOnMacOs, arctiumPath));
+        if (!weAreOnMacOs)
+            IgnoreExceptions("prepare ArctiumLauncher", () => PrepareArctiumLauncher(api, weAreOnMacOs, arctiumPath));
 
         LauncherActions.PrepareGameConfigWtf(gamePath);
 
         IgnoreExceptions("prepare HermesProxy Data", () => LauncherActions.PrepareHermesProxyData(hermesPath));
         LauncherActions.PrepareHermesProxyConfig(hermesPath, config.Realmlist);
 
-        LauncherActions.StartGameViaArctium(gamePath, arctiumPath);
-        LauncherActions.StartHermesProxyAndWaitTillEnd(hermesPath);
+        Process wowProcess;
+        if (weAreOnMacOs)
+            wowProcess = LauncherActions.StartPatchedGameDirectly(gamePath, weAreOnMacOs);
+        else
+            wowProcess = LauncherActions.StartGameViaArctium(gamePath, arctiumPath);
+
+        if (wowProcess.HasExited)
+        {
+            Thread.Sleep(TimeSpan.FromSeconds(5));
+            Console.WriteLine("Press any enter to close this window");
+            Console.ReadLine();
+            return;
+        }
+
+        Process hermesProcess = LauncherActions.StartHermesProxyAndWaitTillEnd(hermesPath);
+
+        // Wait for one of the processes to close
+        Task.WaitAny(wowProcess.WaitForExitAsync(), hermesProcess.WaitForExitAsync());
+
+        Thread.Sleep(TimeSpan.FromSeconds(1));
+        if (wowProcess.HasExited)
+        {
+            ColorConsole.Yellow("-------------");
+            ColorConsole.Yellow("World of Warcraft was closed");
+            ColorConsole.Yellow("You can close this window");
+            ColorConsole.Yellow("-------------");
+        }
+        else if (hermesProcess.HasExited)
+        {
+            ColorConsole.Yellow("Hermes Proxy has exited?");
+            Console.WriteLine("Please report any errors to https://github.com/WowLegacyCore/HermesProxy");
+            Thread.Sleep(TimeSpan.FromSeconds(5));
+            Console.WriteLine("Press any enter to close this window");
+        }
+        else
+        {
+            ColorConsole.Yellow("Something closed unexpectedly?");
+        }
+        Console.ReadLine();
     }
 
     private static void UpdateThisLauncherIfNecessary(UpdateApiClient api, bool weAreOnMacOs, bool onlyNotify)
     {
+        return;
         Version myVersion = Assembly.GetExecutingAssembly().GetName().Version!;
         string myVersionStr = $"{myVersion.Major}.{myVersion.Minor}.{myVersion.Build}";
 
@@ -117,7 +153,7 @@ class Launcher
         catch(Exception e)
         {
             Console.WriteLine(e);
-            Console.WriteLine($">>> Failed to {description}, continuing anyways <<<");
+            ColorConsole.Yellow($">>> Failed to {description}, continuing anyways (might not work) <<<");
             Thread.Sleep(TimeSpan.FromSeconds(10));
         }
 #endif
@@ -136,12 +172,14 @@ class Launcher
 
     private static void PrepareArctiumLauncher(UpdateApiClient api, bool weAreOnMacOs, string arctiumPath)
     {
+        if (weAreOnMacOs)
+            throw new Exception("Arctium does not support MacOS");
+        
         var ghReleaseInfo = api.GetLatestArctiumLauncherRelease();
 
-        var osName = weAreOnMacOs ? "mac" : "win";
         var dlSelector = (GitHubReleaseInfo.Asset a) =>
-            a.Name.Contains(osName, StringComparison.CurrentCultureIgnoreCase) &&
-            !a.Name.Contains("console", StringComparison.CurrentCultureIgnoreCase) &&
+            a.Name.Contains("win", StringComparison.CurrentCultureIgnoreCase) &&
+            !a.Name.Contains("noConsole", StringComparison.CurrentCultureIgnoreCase) &&
             !a.Name.Contains("mods", StringComparison.CurrentCultureIgnoreCase);
 
         ExecuteGithubDownloadIfUpdateAvailable("ArctiumLauncher", arctiumPath, ghReleaseInfo, dlSelector, LauncherActions.ClearAndDownloadArctiumLauncher);
@@ -199,20 +237,22 @@ class Launcher
         {
             Console.WriteLine("Did not found complete 1.14 game installation");
 
-            if (!LauncherActions.ContainsValidGameZip())
+            if (!LauncherActions.ContainsValidGameZip(weAreOnMacOs))
             {
-                var gameDownloadSource = api.GetWindowsGameDownloadSource();
+                var gameDownloadSource = weAreOnMacOs
+                    ? api.GetMacGamePatchDownloadSource()
+                    : api.GetWindowsGameDownloadSource();
                 try
                 {
                     LauncherActions.DownloadGameClientZip(gameDownloadSource);
                 }
                 catch
                 {
-                    Console.WriteLine("Failed to download the game client :(");
+                    ColorConsole.Yellow("Failed to download the game client :(");
                     Console.WriteLine("Is your provider blocking the download?");
                     Console.WriteLine("Please try to download it manually");
                     Console.WriteLine(gameDownloadSource);
-                    Console.WriteLine($"And place it as {LauncherActions.TMP_ARCHIVE_NAME_GAME}");
+                    Console.WriteLine($"And place it as {LauncherActions.TmpGameArchiveName}");
                     Console.WriteLine();
                     Console.WriteLine("Script is going to wait for 30 sec and then tries to continue (might be broken)");
                     Thread.Sleep(TimeSpan.FromSeconds(30));
@@ -220,20 +260,26 @@ class Launcher
                 }
             }
 
-            LauncherActions.ExtractGameClient(gamePath, onlyData: weAreOnMacOs);
-            if (!LauncherActions.CheckGameIntegrity(gamePath, macBuild: weAreOnMacOs))
+            LauncherActions.ExtractGameClient(gamePath);
+            if (weAreOnMacOs)
             {
-                Console.WriteLine("Somehow the extraction was not successful, continuing anyways #yolo");
-                Thread.Sleep(TimeSpan.FromSeconds(2));
-            }
-            else
-            {
-                LauncherActions.RemoveTempGameClientZip();
+                var wtfConfig = Path.Combine(gamePath, "_classic_era_", "WTF", "Config.wtf");
+                File.AppendAllLines(wtfConfig, new []{ "SET cursorSizePreferred \"0\"" }); // fix huge cursor on macos
             }
 
             if (weAreOnMacOs)
             {
-                LauncherActions.DownloadAndApplyMacOsPatches(gamePath);
+                var patcherUrl = api.GetGamePatchingServiceUrl();
+                LauncherActions.PatchGameClient(gamePath, macBuild: weAreOnMacOs, patcherUrl);
+            }
+            if (!LauncherActions.CheckGameIntegrity(gamePath, macBuild: weAreOnMacOs))
+            {
+                ColorConsole.Yellow("Somehow the extraction was not successful, continuing anyways #yolo");
+                Thread.Sleep(TimeSpan.FromSeconds(10));
+            }
+            else
+            {
+                LauncherActions.RemoveTempGameClientZip();
             }
         }
         else
@@ -266,6 +312,8 @@ class Launcher
             version += $"+{GitVersionInformation.CommitsSinceVersionSource}({GitVersionInformation.ShortSha})";
         if (GitVersionInformation.UncommittedChanges != "0")
             version += " dirty";
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            version += " (MacOS)";
         return version;
     }
 

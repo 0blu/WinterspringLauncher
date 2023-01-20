@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -6,24 +7,22 @@ namespace WinterspringLauncher;
 
 public class LauncherConfig
 {
-    public const string DEFAULT_DOWNLOAD_URL = "default";
+    public const string DEFAULT_CONFIG_VALUE = "default";
 
     public int ConfigVersion { get; set; } = 1;
 
-    [Obsolete("Replaced with 'GitRepoWinterspringLauncher'")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? GitRepoEverlookClassic  { get; set; }
     public string GitRepoWinterspringLauncher { get; set; } = "0blu/WinterspringLauncher";
     public string GitRepoHermesProxy { get; set; } = "WowLegacyCore/HermesProxy";
     public string GitRepoArctiumLauncher { get; set; } = "Arctium/WoW-Launcher";
 
-    public string WindowsGameDownloadUrl { get; set; } = DEFAULT_DOWNLOAD_URL;
-    public string MacGamePatchDownloadUrl { get; set; } = DEFAULT_DOWNLOAD_URL;
+    public string WindowsGameDownloadUrl { get; set; } = DEFAULT_CONFIG_VALUE;
+    public string MacGameDownloadUrl { get; set; } = DEFAULT_CONFIG_VALUE;
+    public string GamePatcherUrl { get; set; } = DEFAULT_CONFIG_VALUE;
 
     public string HermesProxyPath { get; set; } = "./hermes-proxy";
-    public string GamePath { get; set; } = "./game-client";
+    public string GamePath { get; set; } = "./World of Warcraft 1.14.0";
     public string ArctiumLauncherPath { get; set; } = "./arctium-launcher";
-    public bool RecreateDesktopShortcut { get; set; } = true;
+    public bool RecreateDesktopShortcut { get; set; } = !RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
     public bool AutoUpdateThisLauncher { get; set; } = false;
 
     public string Realmlist { get; set; } = "logon.everlook.org";
@@ -67,11 +66,6 @@ public class LauncherConfig
 
     private static void PatchConfigIfNeeded(LauncherConfig config)
     {
-#pragma warning disable CS0618
-        if (config.GitRepoEverlookClassic != null)
-            config.GitRepoEverlookClassic = null; // remove old repo from config
-#pragma warning restore CS0618
-
         if (config.ConfigVersion < 2)
         {
             // For future use

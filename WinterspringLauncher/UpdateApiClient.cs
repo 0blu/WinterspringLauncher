@@ -16,16 +16,23 @@ public class UpdateApiClient
 
     public (string? provider, string downloadUrl) GetWindowsGameDownloadSource()
     {
-        return _config.WindowsGameDownloadUrl == LauncherConfig.DEFAULT_DOWNLOAD_URL
+        return _config.WindowsGameDownloadUrl == LauncherConfig.DEFAULT_CONFIG_VALUE
             ? ("wowdl.net", "https://download.wowdl.net/WoW%20Classic%201.14.0.40618%20All%20Languages.rar")
             : (null, _config.WindowsGameDownloadUrl);
     }
 
     public (string? provider, string downloadUrl) GetMacGamePatchDownloadSource()
     {
-        return _config.MacGamePatchDownloadUrl == LauncherConfig.DEFAULT_DOWNLOAD_URL
-            ? throw new NotImplementedException("MacOs")
-            : (null, _config.WindowsGameDownloadUrl);
+        return _config.MacGameDownloadUrl == LauncherConfig.DEFAULT_CONFIG_VALUE
+            ? ("wowdl.net", "https://download.wowdl.net/WoW_Classic_1.14.0.40618_macOS.zip")
+            : (null, _config.MacGameDownloadUrl);
+    }
+
+    public string GetGamePatchingServiceUrl()
+    {
+        return _config.GamePatcherUrl == LauncherConfig.DEFAULT_CONFIG_VALUE
+            ? "https://wow-patching-service.blu.wtf/api/patch-game"
+            : _config.GamePatcherUrl;
     }
 
     public GitHubReleaseInfo GetLatestThisLauncherRelease()
