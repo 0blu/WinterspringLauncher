@@ -72,27 +72,29 @@ class Launcher
         IgnoreExceptions("prepare HermesProxy Data", () => LauncherActions.PrepareHermesProxyData(hermesPath));
         LauncherActions.PrepareHermesProxyConfig(hermesPath, config.Realmlist);
 
-        Process wowProcess;
+        Process? wowProcess;
         if (weAreOnMacOs)
             wowProcess = LauncherActions.StartPatchedGameDirectly(gamePath, weAreOnMacOs);
         else
             wowProcess = LauncherActions.StartGameViaArctium(gamePath, arctiumPath);
 
-        if (wowProcess.HasExited)
+        if (wowProcess == null || wowProcess.HasExited)
         {
+            ColorConsole.Yellow("WoW did not start correctly");
+            ColorConsole.Yellow("Trying to start HermesProxy anyways. Maybe you find a way how to start WoW.");
             Thread.Sleep(TimeSpan.FromSeconds(5));
-            Console.WriteLine("Press any enter to close this window");
-            Console.ReadLine();
-            return;
         }
 
         Process hermesProcess = LauncherActions.StartHermesProxyAndWaitTillEnd(hermesPath);
 
         // Wait for one of the processes to close
-        Task.WaitAny(wowProcess.WaitForExitAsync(), hermesProcess.WaitForExitAsync());
+        if (wowProcess != null)
+            Task.WaitAny(wowProcess.WaitForExitAsync(), hermesProcess.WaitForExitAsync());
+        else
+            Task.WaitAny(hermesProcess.WaitForExitAsync());
 
         Thread.Sleep(TimeSpan.FromSeconds(1));
-        if (wowProcess.HasExited)
+        if (wowProcess?.HasExited ?? false)
         {
             ColorConsole.Yellow("-------------");
             ColorConsole.Yellow("World of Warcraft was closed");
@@ -115,7 +117,6 @@ class Launcher
 
     private static void UpdateThisLauncherIfNecessary(UpdateApiClient api, bool weAreOnMacOs, bool onlyNotify)
     {
-        return;
         Version myVersion = Assembly.GetExecutingAssembly().GetName().Version!;
         string myVersionStr = $"{myVersion.Major}.{myVersion.Minor}.{myVersion.Build}";
 

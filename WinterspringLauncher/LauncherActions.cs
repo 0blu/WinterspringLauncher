@@ -165,7 +165,7 @@ public static class LauncherActions
         }
     }
 
-    public static Process StartPatchedGameDirectly(string gamePath, bool weAreOnMacOs)
+    public static Process? StartPatchedGameDirectly(string gamePath, bool weAreOnMacOs)
     {
         var executablePath = GetGameExecutableFilePath(gamePath, weAreOnMacOs, true);
 
@@ -212,32 +212,38 @@ public static class LauncherActions
         return process;
     }
 
-    public static Process StartGameViaArctium(string gamePath, string arctiumPath)
+    public static Process? StartGameViaArctium(string gamePath, string arctiumPath)
     {
-        bool weAreOnMacOs = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
-
-        var executableName = weAreOnMacOs
-            ? "Arctium WoW Launcher"
-            : "Arctium WoW Launcher.exe";
-
-        var executablePath = Path.Combine(arctiumPath, executableName);
+        const string wowProcName = "WowClassic";
+        var arctiumExePath = Path.Combine(arctiumPath, "Arctium WoW Launcher.exe");
 
         Console.WriteLine("Starting WoW...");
-        var process = Process.Start(new ProcessStartInfo{
-            FileName = executablePath,
+
+        var preStartIds = Process.GetProcessesByName(wowProcName).Select(p => p.Id);
+        var arctiumProc = Process.Start(new ProcessStartInfo{
+            FileName = arctiumExePath,
             WorkingDirectory = arctiumPath,
             Arguments = $"--staticseed --version=ClassicEra --path \"{Path.Combine(gamePath, "_classic_era_")}\"",
             UseShellExecute = true,
         })!;
 
         Thread.Sleep(TimeSpan.FromSeconds(1));
-        if (process.HasExited)
+        if (arctiumProc.HasExited)
         {
             ColorConsole.Yellow("Error: Somehow ArctiumLauncher exited prematurely");
-            Thread.Sleep(TimeSpan.FromSeconds(3));
+            Thread.Sleep(TimeSpan.FromSeconds(5));
         }
 
-        return null!;
+        if (!arctiumProc.WaitForExit(40_000))
+        {
+            ColorConsole.Yellow("Error: ArctiumLauncher timed out (?)");
+            Thread.Sleep(TimeSpan.FromSeconds(5));
+        }
+
+        var postStart = Process.GetProcessesByName(wowProcName).ToHashSet();
+        postStart.RemoveWhere(p => preStartIds.Contains(p.Id));
+
+        return postStart.LastOrDefault();
     }
 
     public static void PatchGameClient(string gamePath, bool macBuild, string patcherUrl)
@@ -318,7 +324,7 @@ public static class LauncherActions
             FileName = executablePath,
             WorkingDirectory = hermesPath,
             Arguments = "--no-version-check",
-        });
+        })!;
 
         return process;
     }
