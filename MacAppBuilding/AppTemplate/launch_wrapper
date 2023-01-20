@@ -1,0 +1,5 @@
+#!/bin/sh
+
+CURRENTPATH=`dirname "${0}"`
+
+open "$CURRENTPATH/WinterspringLauncherTerminal"

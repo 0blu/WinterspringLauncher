@@ -13,8 +13,11 @@ public static class WindowsShellApi
 
     public static void CreateShortcut(string lnkPath, string description, string shortcutTarget, string workingDirectory)
     {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            throw new Exception("Only supported on Windows");
+        
         Guid wshShellGuid = new Guid("72C24DD5-D70A-438B-8A42-98424B88AFB8");
-        var wshShell = (IWshShell)Activator.CreateInstance(Marshal.GetTypeFromCLSID(wshShellGuid));
+        var wshShell = (IWshShell)Activator.CreateInstance(Marshal.GetTypeFromCLSID(wshShellGuid)!)!;
         var shortcut = (IWshShortcut)wshShell.CreateShortcut(lnkPath);
 
         shortcut.Description = description;

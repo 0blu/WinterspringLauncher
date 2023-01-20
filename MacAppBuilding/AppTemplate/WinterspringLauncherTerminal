@@ -1,0 +1,12 @@
+#!/bin/sh
+
+CURRENTPATH=`dirname "${0}"`
+
+# Resize terminal
+printf '\e[8;27;110t'
+
+clear
+
+cd "$CURRENTPATH"
+
+DYLD_LIBRARY_PATH="$CURRENTPATH/Libs" ./WinterspringLauncher
