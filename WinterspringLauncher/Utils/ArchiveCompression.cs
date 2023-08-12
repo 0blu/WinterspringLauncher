@@ -115,18 +115,15 @@ public static class ArchiveCompression
     public static void DecompressSmartSkipFirstFolder(string zipFilePath, string outputDirectory)
     {
         using var zip = ZipFile.OpenRead(zipFilePath); 
-        string? firstFolderName = zip.Entries
-            .Where(e => e.IsFolder())
-            .Select(e => e.FullName.Split('/', StringSplitOptions.RemoveEmptyEntries))
-            .SingleOrDefaultIfMultiple(p => p.Length == 1)?.First();
+        string? zipBaseFolder = GetBaseFolderFromZip(zip);
 
 #if DEBUG
-        Console.WriteLine($"Unzipping {zipFilePath}, detected '{firstFolderName ?? "<null>"}' as first folder");
+        Console.WriteLine($"Unzipping {zipFilePath}, detected '{zipBaseFolder ?? "<null>"}' as first folder");
 #endif
         
-        string ToFilteredPath(string path) => firstFolderName != null
-            ? path.ReplaceFirstOccurrence(firstFolderName, outputDirectory)
-            : outputDirectory;
+        string ToFilteredPath(string path) => zipBaseFolder != null
+            ? path.ReplaceFirstOccurrence(zipBaseFolder, outputDirectory)
+            : path;
 
         string GetCompletePath(ZipArchiveEntry entry) => Path.Combine(outputDirectory, ToFilteredPath(entry.FullName));
 
@@ -141,5 +138,27 @@ public static class ArchiveCompression
     private static bool IsFolder(this ZipArchiveEntry entry)
     {
         return entry.FullName.EndsWith("/");
+    }
+
+    static string? GetBaseFolderFromZip(ZipArchive archive)
+    {
+        string[] entryPaths = archive.Entries.Select(entry => entry.FullName).ToArray();
+        if (entryPaths.Length == 0)
+            return null;
+
+        string[] parts = entryPaths[0].Split('/');
+
+        for (int i = 1; i < entryPaths.Length; i++)
+        {
+            string[] currentParts = entryPaths[i].Split('/');
+
+            int commonParts = parts.Zip(currentParts, (p1, p2) => p1 == p2).TakeWhile(b => b).Count();
+            if (commonParts == 0)
+                return null;
+
+            Array.Resize(ref parts, commonParts);
+        }
+
+        return string.Join("/", parts);
     }
 }
