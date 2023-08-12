@@ -17,14 +17,14 @@ public class UpdateApiClient
     public (string? provider, string downloadUrl) GetWindowsGameDownloadSource()
     {
         return _config.WindowsGameDownloadUrl == LauncherConfig.DEFAULT_CONFIG_VALUE
-            ? ("wowdl.net", "https://download.wowdl.net/WoW%20Classic%201.14.0.40618%20All%20Languages.rar")
+            ? ("wowdl.net", "https://download.wowdl.net/downloadFiles/Clients/WoW%20Classic%201.14.0.40618%20All%20Languages.rar")
             : (null, _config.WindowsGameDownloadUrl);
     }
 
     public (string? provider, string downloadUrl) GetMacGamePatchDownloadSource()
     {
         return _config.MacGameDownloadUrl == LauncherConfig.DEFAULT_CONFIG_VALUE
-            ? ("wowdl.net", "https://download.wowdl.net/WoW_Classic_1.14.0.40618_macOS.zip")
+            ? ("wowdl.net", "https://download.wowdl.net/downloadFiles/Clients/WoW_Classic_1.14.0.40618_macOS_new.zip")
             : (null, _config.MacGameDownloadUrl);
     }
 
