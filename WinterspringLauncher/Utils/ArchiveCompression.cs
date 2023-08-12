@@ -1,6 +1,10 @@
 using System.IO.Compression;
 using System.Reflection;
 
+#if PLATFORM_WINDOWS
+using SevenZip;
+#endif
+
 namespace WinterspringLauncher.Utils;
 
 public static class ArchiveCompression
@@ -42,7 +46,7 @@ public static class ArchiveCompression
         progress.Done();
     }
 
-#if !WIN
+#if !PLATFORM_WINDOWS
     private static void Decompress7ZWithProgress(string archiveFilePath, string extractionFolderPath)
     {
         throw new NotSupportedException("7z is only supported on Windows");
@@ -71,7 +75,7 @@ public static class ArchiveCompression
         }
 
         SevenZipBase.SetLibraryPath("7z.dll");
-        string downloadedFile = Path.Combine(TmpArchiveNameGame);
+        string downloadedFile = Path.Combine(archiveFilePath);
         Console.WriteLine($"Extracting archive into {extractionFolderPath}");
         using (var archiveFile = new SevenZipExtractor(downloadedFile))
         {

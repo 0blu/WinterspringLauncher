@@ -20,6 +20,10 @@
     <IncludeNativeLibrariesForSelfExtract Condition="$([MSBuild]::IsOSPlatform('Windows'))">true</IncludeNativeLibrariesForSelfExtract>
   </PropertyGroup>
 
+  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+    <DefineConstants>PLATFORM_WINDOWS</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
     <EmbeddedResource Include="7z.dll" />
   </ItemGroup>
