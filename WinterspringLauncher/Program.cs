@@ -179,8 +179,7 @@ class Launcher
         var ghReleaseInfo = api.GetLatestArctiumLauncherRelease();
 
         var dlSelector = (GitHubReleaseInfo.Asset a) =>
-            a.Name.Contains("win", StringComparison.CurrentCultureIgnoreCase) &&
-            !a.Name.Contains("noConsole", StringComparison.CurrentCultureIgnoreCase) &&
+            !a.Name.Contains("Console", StringComparison.CurrentCultureIgnoreCase) &&
             !a.Name.Contains("mods", StringComparison.CurrentCultureIgnoreCase);
 
         ExecuteGithubDownloadIfUpdateAvailable("ArctiumLauncher", arctiumPath, ghReleaseInfo, dlSelector, LauncherActions.ClearAndDownloadArctiumLauncher);
