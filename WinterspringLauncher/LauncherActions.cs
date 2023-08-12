@@ -336,8 +336,10 @@ public static class LauncherActions
             return false;
 
         long existingFileLength = new FileInfo(downloadedFile).Length;
-        long expectedFileLength = weAreOnMacOs ? 8611510296 : 8004342849;
-        return existingFileLength == expectedFileLength;
+        return existingFileLength > (5L * 1024 * 1024 * 1024); // more than 5 GB should be the correct size
+        // Old check:
+        //  long expectedFileLength = weAreOnMacOs ? 8611510296 : 8004342849;
+        //  return existingFileLength == expectedFileLength;
     }
 
     public static void DownloadGameClientZip((string? provider, string downloadUrl) downloadSource)
