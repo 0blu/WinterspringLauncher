@@ -13,14 +13,14 @@ The launcher will do everything for you.
 It will download the 1.14 client, setup HermesProxy and launch the game.  
 When HermesProxy has an update it is automatically applied.
 
-### Windows
-1. **Download [the latest .exe release](https://github.com/0blu/EverlookClassicLauncher/releases)**
+### Windows <img src="https://blu.wtf/icon_windows.png" alt="windows" width="24" height="24">
+1. **Download [the latest .exe release](https://github.com/0blu/EverlookClassicLauncher/releases/latest)**
 2. Place it in a separate directory (On first launch it will create subfolders and a desktop icon)
 3. Run it
 4. **Enjoy your stay on Everlook**
 
-### MacOS
-1. **Download [the latest .dmg release](https://github.com/0blu/EverlookClassicLauncher/releases)**
+### MacOS <img src="https://blu.wtf/icon_macos.png?0" alt="macos" width="24" height="24">
+1. **Download [the latest .dmg release](https://github.com/0blu/EverlookClassicLauncher/releases/latest)**
 2. Click on the downloaded .dmg file to open the installer
 3. Drag the Launcher into your Applications folder
 4. Go into your Applications folder, right click the Launcher and **click "Open"**
