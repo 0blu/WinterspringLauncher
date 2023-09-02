@@ -33,11 +33,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="GitVersion.MsBuild" Version="6.0.0-alpha.1">
+    <PackageReference Include="GitVersion.MsBuild" Version="5.12.0">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
 
-    <PackageReference Include="Squid-Box.SevenZipSharp" Version="1.5.0.366" />
+    <PackageReference Include="Squid-Box.SevenZipSharp" Version="1.6.1.23" />
   </ItemGroup>
 
 </Project>
