@@ -1,43 +1,47 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net7.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+        <ApplicationManifest>app.manifest</ApplicationManifest>
+        <ApplicationIcon>Assets/icons/winterspring-launcher-icon.ico</ApplicationIcon>
+    </PropertyGroup>
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net7.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ApplicationIcon>launcher.ico</ApplicationIcon>
-    <Authors>_BLU</Authors>
-    <ImplicitUsings>true</ImplicitUsings>
-    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-    <DebugType>embedded</DebugType>
-  </PropertyGroup>
+    <ItemGroup>
+        <AvaloniaResource Include="Assets\**" />
+        <None Remove=".gitignore" />
+    </ItemGroup>
 
-  <PropertyGroup Condition="'$(UsePublishBuildSettings)' == 'true'">
-    <!-- Build/Publish config -->
-    <!-- we HAVE to set some runtime :(   We overwrite this with 'use-current-runtime' inside build process -->
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <SelfContained>true</SelfContained>
-    <PublishSingleFile>true</PublishSingleFile>
-    <IncludeNativeLibrariesForSelfExtract Condition="$([MSBuild]::IsOSPlatform('Windows'))">true</IncludeNativeLibrariesForSelfExtract>
-  </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="Avalonia" Version="11.0.4" />
+        <PackageReference Include="Avalonia.Desktop" Version="11.0.4" />
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.0.4" />
+        <PackageReference Include="Avalonia.Fonts.Inter" Version="11.0.4" />
+        <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
+        <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.0.4" />
+        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.1" />
+    </ItemGroup>
 
-  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
-    <DefineConstants>PLATFORM_WINDOWS</DefineConstants>
-  </PropertyGroup>
+    <ItemGroup>
+      <UpToDateCheckInput Remove="Assets\icons\language\chinese.png" />
+      <UpToDateCheckInput Remove="Assets\icons\language\english.png" />
+      <UpToDateCheckInput Remove="Assets\icons\language\source.txt" />
+      <UpToDateCheckInput Remove="Assets\language\chinese.png" />
+      <UpToDateCheckInput Remove="Assets\language\english.png" />
+      <UpToDateCheckInput Remove="Assets\language\source.txt" />
+    </ItemGroup>
+    
+    <PropertyGroup>
+        <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    </PropertyGroup>
 
-  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
-    <EmbeddedResource Include="7z.dll" />
-  </ItemGroup>
+    <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+        <DefineConstants>PLATFORM_WINDOWS</DefineConstants>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <EmbeddedResource Include="HermesDataPatches/**/*" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="GitVersion.MsBuild" Version="6.0.0-alpha.1">
-      <PrivateAssets>All</PrivateAssets>
-    </PackageReference>
-
-    <PackageReference Include="Squid-Box.SevenZipSharp" Version="1.5.0.366" />
-  </ItemGroup>
-
+    <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+        <EmbeddedResource Include="7z.dll" />
+        <PackageReference Include="Squid-Box.SevenZipSharp" Version="1.5.0.366" />
+    </ItemGroup>
 </Project>

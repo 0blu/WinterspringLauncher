@@ -1,31 +1,115 @@
-﻿using System.Runtime.InteropServices;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace WinterspringLauncher;
 
-public class LauncherConfig
+public enum OperatingSystem
 {
-    public const string DEFAULT_CONFIG_VALUE = "default";
+    Windows,
+    MacOs
+}
 
-    public int ConfigVersion { get; set; } = 1;
+public class VersionedBaseConfig
+{
+    public int ConfigVersion { get; set; } = 2;
+}
 
-    public string GitRepoWinterspringLauncher { get; set; } = "0blu/WinterspringLauncher";
-    public string GitRepoHermesProxy { get; set; } = "WowLegacyCore/HermesProxy";
-    public string GitRepoArctiumLauncher { get; set; } = "Arctium/WoW-Launcher";
+public class LauncherConfig : VersionedBaseConfig
+{
+    public string LauncherLanguage { get; set; } = "en";
+    public string? GitHubMirror { get; set; } = null; // example "https://asia.cdn.everlook-wow.net/github-mirror/" + "/repos/{repoName}/releases/latest"
+    public string LastSelectedServerName { get; set; } = "";
+    public bool CheckForLauncherUpdates { get; set; } = true;
+    public bool CheckForHermesUpdates { get; set; } = true;
+    public bool CheckForClientPatchUpdates { get; set; } = true;
+    public bool CheckForClientBuildInfoUpdates { get; set; } = true;
 
-    public string WindowsGameDownloadUrl { get; set; } = DEFAULT_CONFIG_VALUE;
-    public string MacGameDownloadUrl { get; set; } = DEFAULT_CONFIG_VALUE;
-    public string GamePatcherUrl { get; set; } = DEFAULT_CONFIG_VALUE;
+    public ServerInfo[] KnownServers { get; set; } = new ServerInfo[]
+    {
+        new ServerInfo
+        {
+            Name = "Everlook (Europe)",
+            RealmlistAddress = "logon.everlook.org",
+            UsedInstallation = "Everlook EU 1.14.2 installation"
+        },
+        new ServerInfo
+        {
+            Name = "Everlook (Asia)",
+            RealmlistAddress = "asia.everlook-wow.net",
+            UsedInstallation = "Everlook Asia 1.14.2 installation",
+        },
+        new ServerInfo
+        {
+            Name = "Localhost (1.14.2)",
+            RealmlistAddress = "127.0.0.1",
+            UsedInstallation = "Default 1.14.2 installation",
+            HermesSettings = new Dictionary<string, string>
+            {
+                ["DebugOutput"] = "true",
+                ["PacketsLog"] = "true",
+            }
+        },
+    };
 
-    public string HermesProxyPath { get; set; } = "./hermes-proxy";
-    public string GamePath { get; set; } = "./World of Warcraft 1.14.0";
-    public string ArctiumLauncherPath { get; set; } = "./arctium-launcher";
-    public bool RecreateDesktopShortcut { get; set; } = !RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
-    public bool AutoUpdateThisLauncher { get; set; } = false;
+    public Dictionary<string, InstallationLocation> GameInstallations { get; set; } = new Dictionary<string, InstallationLocation>
+    {
+        ["Everlook EU 1.14.2 installation"] = new InstallationLocation
+        {
+            Directory = "./winterspring-data/WoW 1.14.2 Everlook",
+            Version = "1.14.2.42597",
+            ClientPatchInfoURL = "https://wow-patches.blu.wtf/patches/1.14.2.42597_summary.json", 
+            CustomBuildInfoURL = "https://eu.cdn.everlook.org/everlook_europe_1.14.2_prod/.build.info",
+            BaseClientDownloadURL = new Dictionary<OperatingSystem, string>() {
+                [OperatingSystem.Windows] = "https://download.wowdl.net/downloadFiles/Clients/WoW%20Classic%201.14.2.42597%20All%20Languages.rar",
+                [OperatingSystem.MacOs] = "https://download.wowdl.net/downloadFiles/Clients/WoW_Classic_1.14.2.42597_macOS.zip",
+            },
+        },
+        ["Everlook Asia 1.14.2 installation"] = new InstallationLocation
+        {
+            Directory = "./winterspring-data/WoW 1.14.2 Everlook Asia",
+            Version = "1.14.2.42597",
+            ClientPatchInfoURL = "https://wow-patches.blu.wtf/patches/1.14.2.42597_summary.json", 
+            CustomBuildInfoURL = "https://asia.cdn.everlook.org/everlook_asia_1.14.2_prod/.build.info",
+            BaseClientDownloadURL = new Dictionary<OperatingSystem, string>() {
+                [OperatingSystem.Windows] = "https://download.wowdl.net/downloadFiles/Clients/WoW%20Classic%201.14.2.42597%20All%20Languages.rar",
+                [OperatingSystem.MacOs] = "https://download.wowdl.net/downloadFiles/Clients/WoW_Classic_1.14.2.42597_macOS.zip",
+            },
+        },
+        ["Default 1.14.2 installation"] = new InstallationLocation
+        {
+            Directory = "./winterspring-data/WoW 1.14.2",
+            Version = "1.14.2.42597",
+            ClientPatchInfoURL = "https://wow-patches.blu.wtf/patches/1.14.2.42597_summary.json",
+            BaseClientDownloadURL = new Dictionary<OperatingSystem, string>() {
+                [OperatingSystem.Windows] = "https://download.wowdl.net/downloadFiles/Clients/WoW%20Classic%201.14.2.42597%20All%20Languages.rar",
+                [OperatingSystem.MacOs] = "https://download.wowdl.net/downloadFiles/Clients/WoW_Classic_1.14.2.42597_macOS.zip",
+            },
+        }
+    };
 
-    public string Realmlist { get; set; } = "logon.everlook.org";
+    public string HermesProxyLocation { get; set; } = "./winterspring-data/HermesProxy";
+
+    public class ServerInfo
+    {
+        public string Name { get; set; }
+        public string RealmlistAddress { get; set; }
+        public string UsedInstallation { get; set; }
+        //public bool? RequiresHermes { get; set; }
+        public Dictionary<string, string>? HermesSettings { get; set; }
+    }
+
+    public class InstallationLocation
+    {
+        public string Version { get; set; }
+        public string Directory { get; set; }
+        public string ClientPatchInfoURL { get; set; }
+        public string? CustomBuildInfoURL { get; set; } // Optional
+        public Dictionary<OperatingSystem, string> BaseClientDownloadURL { get; set; }
+    }
 
     public static LauncherConfig GetDefaultConfig() => new LauncherConfig();
 
@@ -45,8 +129,9 @@ public class LauncherConfig
         }
         else
         {
-            var configTextContent = File.ReadAllText(configPath, Encoding.UTF8);
-            var loadedJson = JsonSerializer.Deserialize<LauncherConfig>(configTextContent);
+            string configTextContent = File.ReadAllText(configPath, Encoding.UTF8);
+            string updatedConfig = PatchConfigIfNeeded(configTextContent);
+            var loadedJson = JsonSerializer.Deserialize<LauncherConfig>(updatedConfig);
             if (loadedJson != null)
             {
                 config = loadedJson;
@@ -58,17 +143,71 @@ public class LauncherConfig
             }
         }
 
-        PatchConfigIfNeeded(config);
         config.SaveConfig(configPath);
 
         return config;
     }
 
-    private static void PatchConfigIfNeeded(LauncherConfig config)
+    private static string PatchConfigIfNeeded(string currentConfig)
     {
-        if (config.ConfigVersion < 2)
+        var configVersion = JsonSerializer.Deserialize<VersionedBaseConfig>(currentConfig);
+        if (configVersion == null)
         {
-            // For future use
+            Console.WriteLine("Unable to determine config version");
+            return currentConfig;
         }
+
+        if (configVersion.ConfigVersion >= 2)
+            return currentConfig; // already on latest version
+
+        if (configVersion.ConfigVersion == 1)
+        {
+            var v1Config = JsonSerializer.Deserialize<LegacyV1Config>(currentConfig);
+            if (v1Config == null)
+                return currentConfig; // Error ?
+
+            var v2Config = new LauncherConfig();
+
+            // If a official everlook server is detected switch the installation directory, so the client does not need to redownload it
+            if (v1Config.Realmlist.Contains("everlook-wow.net", StringComparison.InvariantCultureIgnoreCase))
+            {
+                var knownServer = v2Config.KnownServers.First(g => g.RealmlistAddress.Contains("everlook-wow", StringComparison.InvariantCultureIgnoreCase));
+                var knownInstallation = v2Config.GameInstallations.First(g => g.Key == knownServer.UsedInstallation);
+                knownInstallation.Value.Directory = v1Config.GamePath;
+                v2Config.LastSelectedServerName = knownServer.Name;
+            }
+            else if (v1Config.Realmlist.Contains("everlook.org", StringComparison.InvariantCultureIgnoreCase))
+            {
+                var knownServer = v2Config.KnownServers.First(g => g.RealmlistAddress.Contains("everlook.org", StringComparison.InvariantCultureIgnoreCase));
+                var knownInstallation = v2Config.GameInstallations.First(g => g.Key == knownServer.UsedInstallation);
+                knownInstallation.Value.Directory = v1Config.GamePath;
+                v2Config.LastSelectedServerName = knownServer.Name;
+            }
+
+            return JsonSerializer.Serialize(v2Config);
+        }
+
+        Console.WriteLine("Unknown version");
+        return currentConfig;
+    }
+
+    private class LegacyV1Config : VersionedBaseConfig
+    {
+        public string GitRepoWinterspringLauncher { get; set; }
+        public string GitRepoHermesProxy { get; set; }
+        public string GitRepoArctiumLauncher { get; set; }
+
+        public string WindowsGameDownloadUrl { get; set; }
+        public string MacGameDownloadUrl { get; set; }
+        public string GamePatcherUrl { get; set; }
+
+        public string HermesProxyPath { get; set; }
+        public string GamePath { get; set; }
+        public string ArctiumLauncherPath { get; set; }
+        public bool RecreateDesktopShortcut { get; set; }
+        public bool AutoUpdateThisLauncher { get; set; }
+
+        public string Realmlist { get; set; }
     }
 }
+

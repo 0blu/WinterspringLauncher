@@ -1,0 +1,14 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="WinterspringLauncher.App"
+             RequestedThemeVariant="Dark">
+    <Application.Styles>
+        <SimpleTheme />
+        <!--<FluentTheme />-->
+    </Application.Styles>
+    <Application.Resources>
+        <FontFamily x:Key="MonoFont">avares://WinterspringLauncher/Assets/fonts/RobotoMono-Regular.ttf#</FontFamily>
+        <!--<FontFamily x:Key="MonoFont">Assets\\fonts\\RobotoMono-Regular.ttf</FontFamily>-->
+        <SolidColorBrush x:Key="TerminalBackground">#111111</SolidColorBrush>
+    </Application.Resources>
+</Application>
