@@ -59,7 +59,7 @@ public static class ArchiveCompression
     }
 
 #if !PLATFORM_WINDOWS
-    private static void Decompress7ZWithProgress(string archiveFilePath, string extractionFolderPath)
+    private static void Decompress7ZWithProgress(string archiveFilePath, string extractionFolderPath, string folderToSkipName, UnpackProgressInfoHandler progressHandler)
     {
         throw new NotSupportedException("7z is only supported on Windows");
     }
