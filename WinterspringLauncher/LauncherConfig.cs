@@ -175,6 +175,7 @@ public class LauncherConfig : VersionedBaseConfig
                 var knownInstallation = v2Config.GameInstallations.First(g => g.Key == knownServer.UsedInstallation);
                 knownInstallation.Value.Directory = v1Config.GamePath;
                 v2Config.LastSelectedServerName = knownServer.Name;
+                v2Config.GitHubMirror = "https://asia.cdn.everlook-wow.net/github-mirror/api/";
             }
             else if (v1Config.Realmlist.Contains("everlook.org", StringComparison.InvariantCultureIgnoreCase))
             {

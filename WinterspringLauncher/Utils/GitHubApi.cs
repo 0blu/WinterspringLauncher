@@ -10,9 +10,11 @@ namespace WinterspringLauncher.Utils;
 
 public static class GitHubApi
 {
+    public static string GitHubApiAddress { get; set; } = "https://api.github.com/";
+
     public static GitHubReleaseInfo LatestReleaseVersion(string repoName)
     {
-        var releaseUrl = $"https://api.github.com/repos/{repoName}/releases/latest";
+        var releaseUrl = new Uri(new Uri(GitHubApiAddress), $"repos/{repoName}/releases/latest").ToString();
         var releaseInfo = PerformWebRequest<GitHubReleaseInfo>(releaseUrl);
         return releaseInfo;
     }
@@ -46,7 +48,10 @@ public class GitHubReleaseInfo
 {
     [JsonPropertyName("name")] 
     public string? Name { get; set; }
-    
+
+    [JsonPropertyName("published_at")] 
+    public DateTime PublishedAt { get; set; }
+
     [JsonPropertyName("tag_name")] 
     public string? TagName { get; set; }
 

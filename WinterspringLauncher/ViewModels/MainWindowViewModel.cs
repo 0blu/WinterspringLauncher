@@ -27,6 +27,12 @@ public partial class MainWindowViewModel : ObservableObject
     public int _selectedServerIdx;
 
     [ObservableProperty]
+    public string _thisLauncherVersion = LauncherVersion.ShortVersionString;
+
+    [ObservableProperty]
+    public string _thisLauncherVersionDetailed = LauncherVersion.DetailedVersionString;
+
+    [ObservableProperty]
     private bool _gameIsInstalled = false;
 
     [ObservableProperty]
@@ -44,14 +50,14 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     public bool _hermesIsInstalled;
     
-    public void UpdateHermesPid(int? pid)
+    public void SetHermesPid(int? pid)
     {
         // TODO How to I remove this function and just have a HermesProxyPid Property that will assign the other ones?
         HermesPidToolTipString = pid.HasValue ? $"Hermes PID: {pid.Value}" : null;
         HermesIsRunning = pid.HasValue;
     }
 
-    public void UpdateHermesVersion(string? versionStr)
+    public void SetHermesVersion(string? versionStr)
     {
         DetectedHermesVersion = versionStr;
         HermesIsInstalled = versionStr != null;

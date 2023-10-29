@@ -34,12 +34,21 @@ public partial class LauncherLogic
 
         _config = LauncherConfig.LoadOrCreateDefault(CONFIG_FILE_NAME);
 
-        if (_config.LastSelectedServerName == "")
+        if (_config.LastSelectedServerName == "") // first configuration
         {
-            _config.LastSelectedServerName = CultureInfo.CurrentCulture.Name.StartsWith("zh", StringComparison.InvariantCultureIgnoreCase)
+            bool isAsia = CultureInfo.CurrentCulture.Name.StartsWith("zh", StringComparison.InvariantCultureIgnoreCase);
+
+            _config.LastSelectedServerName = isAsia
                 ? "Everlook (Asia)"
                 : "Everlook (Europe)";
+
+            _config.GitHubMirror = isAsia
+                ? "https://asia.cdn.everlook-wow.net/github-mirror/api/"
+                : null;
         }
+
+        if (_config.GitHubMirror != null)
+            GitHubApi.GitHubApiAddress = _config.GitHubMirror;
 
         for (var i = 0; i < _config.KnownServers.Length; i++)
         {
@@ -60,12 +69,35 @@ public partial class LauncherLogic
         {
             localHermesVersion = File.ReadLines(hermesProxyVersionFile).First().Split("|")[0];
         }
-        _model.UpdateHermesVersion(localHermesVersion);
+        _model.SetHermesVersion(localHermesVersion);
+
+
+        if (_config.CheckForLauncherUpdates)
+        {
+            Task.Run(() =>
+            {
+                try
+                {
+                    if (LauncherVersion.CheckIfUpdateIsAvailable(out var updateInformation))
+                    {
+                        _model.AddLogEntry($"--------------------------");
+                        _model.AddLogEntry($"This launcher has a new version {updateInformation.VersionName} ({updateInformation.ReleaseDate:yyyy-MM-dd})");
+                        _model.AddLogEntry($"You can download it here {updateInformation.URLLinkToReleasePage}");
+                        _model.AddLogEntry($"--------------------------");
+                    }
+                    Console.WriteLine("Launcher update check done");
+                }
+                catch (Exception e)
+                {
+                    _model.AddLogEntry("An error occured while checking for a launcher update");
+                    Console.WriteLine(e);
+                }
+            });
+        }
     }
 
     public void ChangeServerIdx()
     {
-        Console.WriteLine($"Selected ServerIdx: {_model.SelectedServerIdx}");
         var serverInfo = _config.KnownServers.ElementAtOrDefault(_model.SelectedServerIdx);
         if (serverInfo == null)
         {
@@ -74,6 +106,7 @@ public partial class LauncherLogic
             return;
         }
 
+        Console.WriteLine($"Selected Server: {serverInfo.Name}");
         var gameInstallation = _config.GameInstallations.GetValueOrDefault(serverInfo.UsedInstallation);
         if (gameInstallation == null)
         {

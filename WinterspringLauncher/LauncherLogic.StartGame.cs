@@ -150,6 +150,8 @@ public partial class LauncherLogic
 
                     clientWasDownloadedInThisSession = true;
                 }
+
+                _model.GameIsInstalled = true;
             }
 
             if (gameInstallation.CustomBuildInfoURL != null && (clientWasDownloadedInThisSession || _config.CheckForClientBuildInfoUpdates))
@@ -192,6 +194,8 @@ public partial class LauncherLogic
                         throw new Exception($"Found {possibleDownloads.Count} HermesProxy versions for your OS");
 
                     var targetDir = new DirectoryInfo(FullPath(_config.HermesProxyLocation)).FullName;
+                    if (!Directory.Exists(targetDir))
+                        Directory.CreateDirectory(targetDir);
 
                     var downloadDestLocation = targetDir + ".partial-download";
 
@@ -220,7 +224,7 @@ public partial class LauncherLogic
                         $"Source: {downloadUrl}"
                     });
 
-                    _model.UpdateHermesVersion(releaseInfo.TagName);
+                    _model.SetHermesVersion(releaseInfo.TagName);
                 }
             }
 
@@ -240,17 +244,17 @@ public partial class LauncherLogic
                 hermesSettingsOverwrite.Add("ServerPort", splittedRealmlist.Last());
 
             var hermesProcess = LauncherActions.StartHermesProxy(_config.HermesProxyLocation, modernBuild, hermesSettingsOverwrite, (logLine) => { _model.AddLogEntry(logLine); });
-            _model.UpdateHermesPid(hermesProcess.Id);
+            _model.SetHermesPid(hermesProcess.Id);
             hermesProcess.Exited += (a, e) =>
             {
                 _model.AddLogEntry($"HERMES PROXY HAS CLOSED! Status: {hermesProcess.ExitCode}");
-                _model.UpdateHermesPid(null);
+                _model.SetHermesPid(null);
             };
             await Task.Delay(TimeSpan.FromSeconds(1));
             if (hermesProcess.HasExited)
             {
                 _model.AddLogEntry($"HERMES PROXY HAS CLOSED PREMATURELY! Status: {hermesProcess.ExitCode}");
-                _model.UpdateHermesPid(null);
+                _model.SetHermesPid(null);
             }
 
             _model.SetProgressbar("Starting Game", 90, overallProgressColor);

@@ -37,7 +37,7 @@
             </Style>
         </Styles>
     </Window.Styles>
-    
+
     <Grid RowDefinitions="Auto, *">
         <!-- Top system bar -->
         <Panel Grid.Row="0" Height="30" Background="#11ffffff" IsHitTestVisible="False">
@@ -163,9 +163,9 @@
                 </Grid>
                 <Grid ColumnDefinitions="Auto, *, Auto">
                     <StackPanel Orientation="Vertical" Grid.Column="0" Spacing="5">
-                        <StackPanel Orientation="Horizontal">
+                        <StackPanel Orientation="Horizontal" ToolTip.Tip="{ Binding ThisLauncherVersionDetailed }">
                             <TextBlock Text="Launcher: " HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            <TextBlock Text="v2.0.0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <TextBlock Text="{ Binding ThisLauncherVersion }" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal" ToolTip.Tip="{ Binding HermesPidToolTipString, RelativeSource=HermesPid }">
@@ -173,7 +173,7 @@
                             <TextBlock IsVisible="{ Binding !HermesIsInstalled }" Text="will be installed" />
                             <TextBlock IsVisible="{ Binding HermesIsInstalled }" Text="{ Binding DetectedHermesVersion }" />
                             <TextBlock IsVisible="{ Binding HermesIsRunning }">
-                                <Span>(</Span><Span Foreground="#689f38">running</Span><Span>)</Span>
+                                <Span> (</Span><Span Foreground="#689f38">running</Span><Span>)</Span>
                                 <!-- Button to kill hermes process -->
                             </TextBlock>
                         </StackPanel>
@@ -182,10 +182,10 @@
                             <TextBlock Text="Game Version: " HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{ Binding GameVersion }" />
                             <TextBlock IsVisible="{ Binding GameIsInstalled }" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <Span>(</Span><Span Foreground="#689f38">installed</Span><Span>)</Span>
+                                <Span> (</Span><Span Foreground="#689f38">installed</Span><Span>)</Span>
                             </TextBlock>
                             <TextBlock IsVisible="{ Binding !GameIsInstalled }" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <Span>(</Span><Span Foreground="#7c2b11">Will be downloaded/patched</Span><Span>)</Span>
+                                <Span> (</Span><Span Foreground="#7c2b11">Will be downloaded/patched</Span><Span>)</Span>
                             </TextBlock>
                         </StackPanel>
                     </StackPanel>

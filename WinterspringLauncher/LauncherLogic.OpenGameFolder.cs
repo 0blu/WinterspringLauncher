@@ -33,6 +33,7 @@ public partial class LauncherLogic
         if (!Directory.Exists(absPath))
         {
             _model.AddLogEntry("Game folder does not exists");
+            _model.AddLogEntry($"Expected path: {absPath}");
             return;
         }
         
