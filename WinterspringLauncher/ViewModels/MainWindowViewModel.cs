@@ -33,6 +33,9 @@ public partial class MainWindowViewModel : ObservableObject
     public string _thisLauncherVersionDetailed = LauncherVersion.DetailedVersionString;
 
     [ObservableProperty]
+    private bool _gameFolderExists = false;
+
+    [ObservableProperty]
     private bool _gameIsInstalled = false;
 
     [ObservableProperty]

@@ -119,6 +119,7 @@ public partial class LauncherLogic
         _config.SaveConfig(CONFIG_FILE_NAME);
 
         var expectedPatchedClientLocation = Path.Combine(gameInstallation.Directory, SubPathToWowForCustomServers);
+        _model.GameFolderExists = Directory.Exists(gameInstallation.Directory);
         _model.GameIsInstalled = File.Exists(expectedPatchedClientLocation);
 
         _model.GameVersion = string.Join('.', gameInstallation.Version.Split('.').SkipLast(1));

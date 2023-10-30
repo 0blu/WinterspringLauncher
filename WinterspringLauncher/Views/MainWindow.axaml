@@ -69,7 +69,7 @@
                             </ComboBox.ItemTemplate>
                         </ComboBox>
                     </StackPanel>
-                    <Button Command="{Binding Logic.OpenGameFolder}">
+                    <Button Command="{Binding Logic.OpenGameFolder}" IsEnabled="{ Binding GameFolderExists }">
                         <Image Margin="0, 1, 0, 0" Source="/Assets/icons/folder.png" Width="20" Height="20" VerticalAlignment="Center" HorizontalAlignment="Center" IsEnabled="{Binding GameIsInstalled}"/>
                     </Button>
                     <!--
