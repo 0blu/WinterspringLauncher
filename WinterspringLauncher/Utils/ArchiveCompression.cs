@@ -14,7 +14,7 @@ public static class ArchiveCompression
 {
     public delegate void UnpackProgressInfoHandler(long totalFileCount, long alreadyUnpackedFileCount);
 
-    public static void Decompress(string archiveFilePath, string extractionFolderPath, string folderToSkipName, UnpackProgressInfoHandler progressHandler)
+    public static void Decompress(string archiveFilePath, string extractionFolderPath, string folderToSkipName, UnpackProgressInfoHandler progressHandler, Func<string, bool> shouldBeDecompressedPredicate)
     {
         byte[] buffer = new byte[4];
         using (FileStream fileHandle = File.OpenRead(archiveFilePath))
@@ -24,11 +24,11 @@ public static class ArchiveCompression
 
         if (buffer.SequenceEqual(new byte[] { 0x52, 0x61, 0x72, 0x21 })) // Rar!
         {
-            Decompress7ZWithProgress(archiveFilePath, extractionFolderPath, folderToSkipName, progressHandler);
+            Decompress7ZWithProgress(archiveFilePath, extractionFolderPath, folderToSkipName, progressHandler, shouldBeDecompressedPredicate);
         }
         else if (buffer[..2].SequenceEqual(new byte[] { 0x50, 0x4B })) // Zip
         {
-            DecompressZipWithProgress(archiveFilePath, extractionFolderPath, folderToSkipName, progressHandler);
+            DecompressZipWithProgress(archiveFilePath, extractionFolderPath, folderToSkipName, progressHandler, shouldBeDecompressedPredicate);
         }
         else // Error
         {
@@ -36,10 +36,10 @@ public static class ArchiveCompression
         }
     }
 
-    private static void DecompressZipWithProgress(string archiveFilePath, string extractionFolderPath, string folderToSkipName, UnpackProgressInfoHandler progressHandler)
+    private static void DecompressZipWithProgress(string archiveFilePath, string extractionFolderPath, string folderToSkipName, UnpackProgressInfoHandler progressHandler, Func<string, bool> shouldBeDecompressedPredicate)
     {
         using var zip = ZipFile.OpenRead(archiveFilePath);
-        bool ShouldBeDecompressed(ZipArchiveEntry entry) => !entry.FullName.EndsWith("\\") && !entry.FullName.EndsWith("/");
+        bool ShouldBeDecompressed(ZipArchiveEntry entry) => !entry.FullName.EndsWith("\\") && !entry.FullName.EndsWith("/") && shouldBeDecompressedPredicate(entry.FullName);
         var totalSize = zip.Entries.Where(ShouldBeDecompressed).Sum(x => x.Length);
         var totalCount = zip.Entries.Where(ShouldBeDecompressed).Count();
 
@@ -59,12 +59,12 @@ public static class ArchiveCompression
     }
 
 #if !PLATFORM_WINDOWS
-    private static void Decompress7ZWithProgress(string archiveFilePath, string extractionFolderPath, string folderToSkipName, UnpackProgressInfoHandler progressHandler)
+    private static void Decompress7ZWithProgress(string archiveFilePath, string extractionFolderPath, string folderToSkipName, UnpackProgressInfoHandler progressHandler, Func<string, bool> shouldBeDecompressed)
     {
         throw new NotSupportedException("7z is only supported on Windows");
     }
 #else
-    private static void Decompress7ZWithProgress(string archiveFilePath, string extractionFolderPath, string folderToSkipName, UnpackProgressInfoHandler progressHandler)
+    private static void Decompress7ZWithProgress(string archiveFilePath, string extractionFolderPath, string folderToSkipName, UnpackProgressInfoHandler progressHandler, Func<string, bool> shouldBeDecompressedPredicate)
     {
         var assembly = Assembly.GetExecutingAssembly();
         var resourceName = "WinterspringLauncher.7z.dll";
@@ -91,7 +91,7 @@ public static class ArchiveCompression
         Console.WriteLine($"Extracting archive into {extractionFolderPath}");
         using (var archiveFile = new SevenZipExtractor(downloadedFile))
         {
-            bool ShouldBeDecompressed(ArchiveFileInfo entry) => !entry.IsDirectory;
+            bool ShouldBeDecompressed(ArchiveFileInfo entry) => !entry.IsDirectory && shouldBeDecompressedPredicate(entry.FileName);
             string ToPath(string path) => path.ReplaceFirstOccurrence(folderToSkipName, extractionFolderPath);
 
             long totalSize = 0;

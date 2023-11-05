@@ -79,15 +79,15 @@ public static class LauncherActions
 
     public static void Unpack(string compressedArchivePath, string targetDir, UnpackProgressInfoHandler progressInfoHandler)
     {
-        ArchiveCompression.Decompress(compressedArchivePath, targetDir, "World of Warcraft",
+        ArchiveCompression.Decompress(compressedArchivePath, targetDir, folderToSkipName: "World of Warcraft", // TODO: <-- move this check somewhere else
             (totalFileCount, alreadyUnpackedFileCount) =>
             {
                 progressInfoHandler(totalFileCount, alreadyUnpackedFileCount);
-            });
+            }, shouldBeDecompressedPredicate: (filePath) => !filePath.Contains("World of Warcraft Launcher.exe")); // TODO: <-- move this check somewhere else
     }
 
     public delegate void OnLogLine(string logLine);
-    
+
     public static Process StartHermesProxy(string hermesDir, ushort modernClientBuild, Dictionary<string, string> settingsOverwrite, OnLogLine logLine)
     {
         bool weAreOnMacOs = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);

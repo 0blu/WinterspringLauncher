@@ -121,34 +121,45 @@ public partial class LauncherLogic
                     RunUnpack(downloadDestLocation, targetDir);
                 }
 
-                if (!File.Exists(expectedPatchedClientLocation) || (_config.CheckForClientPatchUpdates))
-                {
-                    _model.SetProgressbar("Checking WoW patch status", 30, overallProgressColor);
-                    await Task.Delay(TimeSpan.FromSeconds(0.5));
-
-                    string summaryUrl = gameInstallation.ClientPatchInfoURL;
-
-                    _model.AddLogEntry($"Summary URL: {summaryUrl}");
-                    var patchSummary = SimpleFileDownloader.PerformGetJsonRequest<BinaryPatchHandler.PatchSummary>(summaryUrl);
-
-                    var selectedPatchInfo = weAreOnMacOs ? patchSummary.MacOs : patchSummary.Windows;
-                    if (selectedPatchInfo == null)
-                        throw new Exception($"No path for '{(weAreOnMacOs ? "macos" : "windows")}' was found");
-
-                    if (!File.Exists(expectedPatchedClientLocation) || selectedPatchInfo.ToSha256 != HashHelper.CreateHexSha256HashFromFilename(expectedDefaultClientLocation))
+                try {
+                    if (!File.Exists(expectedPatchedClientLocation) || (_config.CheckForClientPatchUpdates))
                     {
-                        _model.AddLogEntry("Patched client update required");
-                        var patchUrl = string.Join("/", summaryUrl.Split("/").SkipLast(1)) + $"/{selectedPatchInfo.PatchFilename}";
-                        _model.AddLogEntry($"Patch URL: {patchUrl}");
+                        _model.SetProgressbar("Checking WoW patch status", 30, overallProgressColor);
                         await Task.Delay(TimeSpan.FromSeconds(0.5));
 
-                        var patchFileContent = SimpleFileDownloader.PerformGetBytesRequest(patchUrl);
-                        BinaryPatchHandler.ApplyPatch(patchFileContent, sourceFile: expectedDefaultClientLocation, targetFile: expectedPatchedClientLocation);
-                        _model.AddLogEntry("Patch was applied!");
-                        await Task.Delay(TimeSpan.FromSeconds(0.5));
+                        string summaryUrl = gameInstallation.ClientPatchInfoURL;
+
+                        _model.AddLogEntry($"Summary URL: {summaryUrl}");
+                        var patchSummary = SimpleFileDownloader.PerformGetJsonRequest<BinaryPatchHandler.PatchSummary>(summaryUrl);
+
+                        var selectedPatchInfo = weAreOnMacOs ? patchSummary.MacOs : patchSummary.Windows;
+                        if (selectedPatchInfo == null)
+                            throw new Exception($"No path for '{(weAreOnMacOs ? "macos" : "windows")}' was found");
+
+                        if (!File.Exists(expectedPatchedClientLocation) || selectedPatchInfo.ToSha256 != HashHelper.CreateHexSha256HashFromFilename(expectedDefaultClientLocation))
+                        {
+                            _model.AddLogEntry("Patched client update required");
+                            var patchUrl = string.Join("/", summaryUrl.Split("/").SkipLast(1)) + $"/{selectedPatchInfo.PatchFilename}";
+                            _model.AddLogEntry($"Patch URL: {patchUrl}");
+                            await Task.Delay(TimeSpan.FromSeconds(0.5));
+
+                            var patchFileContent = SimpleFileDownloader.PerformGetBytesRequest(patchUrl);
+                            BinaryPatchHandler.ApplyPatch(patchFileContent, sourceFile: expectedDefaultClientLocation, targetFile: expectedPatchedClientLocation);
+                            _model.AddLogEntry("Patch was applied!");
+                            await Task.Delay(TimeSpan.FromSeconds(0.5));
+                        }
                     }
 
                     clientWasDownloadedInThisSession = true;
+                }
+                catch (Exception e) when (File.Exists(expectedPatchedClientLocation))
+                {
+                    _model.AddLogEntry("Failed to check for an update for the client");
+                    _model.AddLogEntry("But since the file exists this error can be ignored");
+                    await Task.Delay(TimeSpan.FromSeconds(0.5));
+                    _model.AddLogEntry(e.ToString());
+                    await Task.Delay(TimeSpan.FromSeconds(5));
+                    Console.WriteLine(e);
                 }
 
                 _model.GameIsInstalled = true;
@@ -204,7 +215,6 @@ public partial class LauncherLogic
                     _model.AddLogEntry($"Download URL: {downloadUrl}");
                     _model.AddLogEntry($"Download Location: {downloadDestLocation}");
                     RunDownload(downloadUrl, downloadDestLocation);
-
 
                     var directories = Directory.GetDirectories(targetDir);
                     foreach (string directory in directories)
@@ -275,15 +285,5 @@ public partial class LauncherLogic
                 _model.InputIsAllowed = true;
             }
         });
-
-
-        //_model.MyArray.Add("Abc");
-        //_model.MyArray.RemoveAt(0);
-        /*
-        if (!_model.InputIsAllowed)
-            return;
-        _model.InputIsAllowed = false;
-        _model.TotalProgress = 0;
-        */
     }
 }
