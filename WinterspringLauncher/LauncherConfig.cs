@@ -64,7 +64,7 @@ public class LauncherConfig : VersionedBaseConfig
             Directory = "./winterspring-data/WoW 1.14.2 Everlook",
             Version = "1.14.2.42597",
             ClientPatchInfoURL = "https://wow-patches.blu.wtf/patches/1.14.2.42597_summary.json", 
-            CustomBuildInfoURL = "https://eu.cdn.everlook.org/everlook_europe_1.14.2_prod/.build.info",
+            CustomBuildInfoURL = "https://eu.cdn.everlook.org/game-client-patch-cdn/everlook_eu_prod_1_14_2/latest-build-info",
             BaseClientDownloadURL = new Dictionary<OperatingSystem, string>() {
                 [OperatingSystem.Windows] = "https://download.wowdl.net/downloadFiles/Clients/WoW%20Classic%201.14.2.42597%20All%20Languages.rar",
                 [OperatingSystem.MacOs] = "https://download.wowdl.net/downloadFiles/Clients/WoW_Classic_1.14.2.42597_macOS.zip",
@@ -75,7 +75,7 @@ public class LauncherConfig : VersionedBaseConfig
             Directory = "./winterspring-data/WoW 1.14.2 Everlook Asia",
             Version = "1.14.2.42597",
             ClientPatchInfoURL = "https://wow-patches.blu.wtf/patches/1.14.2.42597_summary.json", 
-            CustomBuildInfoURL = "https://asia.cdn.everlook.org/everlook_asia_1.14.2_prod/.build.info",
+            CustomBuildInfoURL = "http://asia.cdn.everlook.aclon.cn/game-client-patch-cdn/everlook_asia_prod_1_14_2/latest-build-info",
             BaseClientDownloadURL = new Dictionary<OperatingSystem, string>() {
                 [OperatingSystem.Windows] = "http://asia.cdn.everlook.aclon.cn/game-client-patch-cdn/wow_classic_1_14_2_42597_all_languages.rar",
                 [OperatingSystem.MacOs] = "http://asia.cdn.everlook.aclon.cn/game-client-patch-cdn/wow_classic_1_14_2_42597_all_languages_macos.rar",
