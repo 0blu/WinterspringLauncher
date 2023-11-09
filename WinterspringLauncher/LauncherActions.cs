@@ -41,11 +41,8 @@ public static class LauncherActions
         List<string> configContent;
         if (!File.Exists(configWtfPath))
         {
-            // TODO Take the language from this launcher
             configContent = new List<string>();
-            string bestDefaultTextLocale = CultureInfo.CurrentCulture.Name.StartsWith("zh", StringComparison.InvariantCultureIgnoreCase)
-                    ? "zhCN"
-                    : "enUS";
+            string bestDefaultTextLocale = LocaleDefaults.GetBestWoWConfigLocale();
             configContent.Add($"SET textLocale {bestDefaultTextLocale}");
         }
         else

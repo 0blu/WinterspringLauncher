@@ -48,6 +48,7 @@ public partial class LauncherLogic
         }
 
         IBrush overallProgressColor = Brush.Parse("#4caf50");
+        IBrush sideProgressColor = Brush.Parse("#553399");
         Task.Run(async () =>
         {
             if (_model.HermesIsRunning)
@@ -165,6 +166,7 @@ public partial class LauncherLogic
                 _model.GameIsInstalled = true;
             }
 
+            bool buildInfoWasChanged = false;
             if (gameInstallation.CustomBuildInfoURL != null && (clientWasDownloadedInThisSession || _config.CheckForClientBuildInfoUpdates))
             {
                 _model.SetProgressbar("Checking BuildInfo status", 35, overallProgressColor);
@@ -173,13 +175,14 @@ public partial class LauncherLogic
 
                 _model.AddLogEntry($"BuildInfo URL: {gameInstallation.CustomBuildInfoURL}");
                 string newBuildInfo = SimpleFileDownloader.PerformGetStringRequest(gameInstallation.CustomBuildInfoURL);
-                string existingBuildInfo = File.ReadAllText(buildInfoFilePath);
+                string existingBuildInfo = File.Exists(buildInfoFilePath) ? File.ReadAllText(buildInfoFilePath) : string.Empty;
 
                 if (newBuildInfo.ReplaceLineEndings() != existingBuildInfo.ReplaceLineEndings())
                 {
                     _model.AddLogEntry("BuildInfo update detected");
                     await Task.Delay(TimeSpan.FromSeconds(0.5));
                     File.WriteAllText(buildInfoFilePath, newBuildInfo);
+                    buildInfoWasChanged = true;
                 }
             }
 
@@ -273,6 +276,11 @@ public partial class LauncherLogic
             _model.SetProgressbar("Starting Game", 95, overallProgressColor);
             await Task.Delay(TimeSpan.FromSeconds(0.5));
             LauncherActions.StartGame(Path.Combine(gameInstallation.Directory, SubPathToWowForCustomServers));
+            if (buildInfoWasChanged)
+            {
+                _model.SetProgressbar("Your game is updating please wait a bit (check Task Manager!)", 100, sideProgressColor);
+                await Task.Delay(TimeSpan.FromSeconds(30));
+            }
         }).ContinueWith((t) =>
         {
             if (t.Exception != null)

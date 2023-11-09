@@ -36,15 +36,8 @@ public partial class LauncherLogic
 
         if (_config.LastSelectedServerName == "") // first configuration
         {
-            bool isAsia = CultureInfo.CurrentCulture.Name.StartsWith("zh", StringComparison.InvariantCultureIgnoreCase);
-
-            _config.LastSelectedServerName = isAsia
-                ? "Everlook (Asia)"
-                : "Everlook (Europe)";
-
-            _config.GitHubMirror = isAsia
-                ? "https://asia.cdn.everlook-wow.net/github-mirror/api/"
-                : null;
+            _config.LastSelectedServerName = LocaleDefaults.GetBestServerName();
+            _config.GitHubMirror = LocaleDefaults.GetBestGitHubMirror();
         }
 
         if (_config.GitHubMirror != null)

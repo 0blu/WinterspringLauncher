@@ -33,7 +33,7 @@ public class HashHelper
         
         StringBuilder hashBuilder = new StringBuilder(32);
         foreach (byte b in binarySha256Hash)
-            hashBuilder.Append(b.ToString("x2"));
+            hashBuilder.Append(b.ToString("X2"));
         return hashBuilder.ToString();
     }
 }

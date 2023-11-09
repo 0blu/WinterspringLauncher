@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
+using WinterspringLauncher.Utils;
 
 namespace WinterspringLauncher;
 
@@ -75,8 +77,8 @@ public class LauncherConfig : VersionedBaseConfig
             ClientPatchInfoURL = "https://wow-patches.blu.wtf/patches/1.14.2.42597_summary.json", 
             CustomBuildInfoURL = "https://asia.cdn.everlook.org/everlook_asia_1.14.2_prod/.build.info",
             BaseClientDownloadURL = new Dictionary<OperatingSystem, string>() {
-                [OperatingSystem.Windows] = "https://download.wowdl.net/downloadFiles/Clients/WoW%20Classic%201.14.2.42597%20All%20Languages.rar",
-                [OperatingSystem.MacOs] = "https://download.wowdl.net/downloadFiles/Clients/WoW_Classic_1.14.2.42597_macOS.zip",
+                [OperatingSystem.Windows] = "http://asia.cdn.everlook.aclon.cn/game-client-patch-cdn/wow_classic_1_14_2_42597_all_languages.rar",
+                [OperatingSystem.MacOs] = "http://asia.cdn.everlook.aclon.cn/game-client-patch-cdn/wow_classic_1_14_2_42597_all_languages_macos.rar",
             },
         },
         ["Default 1.14.2 installation"] = new InstallationLocation
@@ -173,16 +175,16 @@ public class LauncherConfig : VersionedBaseConfig
             {
                 var knownServer = v2Config.KnownServers.First(g => g.RealmlistAddress.Contains("everlook-wow", StringComparison.InvariantCultureIgnoreCase));
                 var knownInstallation = v2Config.GameInstallations.First(g => g.Key == knownServer.UsedInstallation);
-                knownInstallation.Value.Directory = v1Config.GamePath;
-                v2Config.LastSelectedServerName = knownServer.Name;
                 v2Config.GitHubMirror = "https://asia.cdn.everlook-wow.net/github-mirror/api/";
+                v2Config.LastSelectedServerName = knownServer.Name;
+                TryUpgradeOldGameFolder(knownInstallation.Value.Directory, v1Config.GamePath);
             }
             else if (v1Config.Realmlist.Contains("everlook.org", StringComparison.InvariantCultureIgnoreCase))
             {
                 var knownServer = v2Config.KnownServers.First(g => g.RealmlistAddress.Contains("everlook.org", StringComparison.InvariantCultureIgnoreCase));
                 var knownInstallation = v2Config.GameInstallations.First(g => g.Key == knownServer.UsedInstallation);
-                knownInstallation.Value.Directory = v1Config.GamePath;
                 v2Config.LastSelectedServerName = knownServer.Name;
+                TryUpgradeOldGameFolder(oldGameFolder: v1Config.GamePath, newGameFolder: knownInstallation.Value.Directory);
             }
 
             return JsonSerializer.Serialize(v2Config);
@@ -190,6 +192,43 @@ public class LauncherConfig : VersionedBaseConfig
 
         Console.WriteLine("Unknown version");
         return currentConfig;
+    }
+
+    private static void TryUpgradeOldGameFolder(string oldGameFolder, string newGameFolder)
+    {
+        try
+        {
+            bool weAreOnMacOs = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
+            if (!weAreOnMacOs)
+            {
+                string known_1_14_2_client_hash = "43F407C7915602D195812620D68C3E5AE10F20740549D2D63A0B04658C02A123";
+
+                var gameExecutablePath = Path.Combine(oldGameFolder, "_classic_era_", "WoWClassic.exe");
+
+                if (File.Exists(gameExecutablePath) && HashHelper.CreateHexSha256HashFromFilename(gameExecutablePath) == known_1_14_2_client_hash)
+                {
+                    // We can just move the whole folder
+                    Directory.Move(oldGameFolder, newGameFolder); // <-- might fail if target is not empty
+                }
+                else
+                {
+                    // Just copy the WTF and Interface folder
+
+                    var oldInterfaceFolder = Path.Combine(oldGameFolder, "_classic_era_", "Interface");
+                    var newInterfaceFolder = Path.Combine(newGameFolder, "_classic_era_", "Interface");
+                    DirectoryCopy.Copy(oldInterfaceFolder, newInterfaceFolder);
+
+                    var oldWtfFolder = Path.Combine(oldGameFolder, "_classic_era_", "WTF");
+                    var newWtfFolder = Path.Combine(newGameFolder, "_classic_era_", "WTF");
+                    DirectoryCopy.Copy(oldWtfFolder, newWtfFolder);
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine("Error while TryUpgradeOldGameFolder");
+            Console.WriteLine(e);
+        }
     }
 
     private class LegacyV1Config : VersionedBaseConfig
