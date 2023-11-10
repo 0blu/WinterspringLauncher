@@ -173,8 +173,17 @@ public partial class LauncherLogic
 
                 string buildInfoFilePath = Path.Combine(gameInstallation.Directory, ".build.info");
 
-                _model.AddLogEntry($"BuildInfo URL: {gameInstallation.CustomBuildInfoURL}");
-                string newBuildInfo = SimpleFileDownloader.PerformGetStringRequest(gameInstallation.CustomBuildInfoURL);
+                string newBuildInfo;
+                try
+                {
+                    newBuildInfo = SimpleFileDownloader.PerformGetStringRequest(gameInstallation.CustomBuildInfoURL);
+                }
+                catch
+                {
+                    _model.AddLogEntry($"BuildInfo URL: {gameInstallation.CustomBuildInfoURL}");
+                    throw;
+                }
+
                 string existingBuildInfo = File.Exists(buildInfoFilePath) ? File.ReadAllText(buildInfoFilePath) : string.Empty;
 
                 if (newBuildInfo.ReplaceLineEndings() != existingBuildInfo.ReplaceLineEndings())
@@ -186,6 +195,7 @@ public partial class LauncherLogic
                 }
             }
 
+            _model.AddLogEntry("Checking HermesProxy status");
             _model.SetProgressbar("Checking HermesProxy status", 50, overallProgressColor);
             await Task.Delay(TimeSpan.FromSeconds(0.5));
 
