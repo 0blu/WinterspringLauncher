@@ -53,6 +53,7 @@ public static class LauncherActions
         var newLine = $"SET portal \"{portalAddress}\"";
         bool wasChanged = false;
 
+        // Add SET PORTAL ...
         var currentPortalLine = configContent.FindIndex(l => l.StartsWith("SET portal "));
         if (currentPortalLine != -1)
         {
@@ -65,6 +66,14 @@ public static class LauncherActions
         else
         {
             configContent.Add(newLine);
+            wasChanged = true;
+        }
+
+        // Remove disableServerNagle
+        var disableServerNagleLine = configContent.FindIndex(l => l.StartsWith("SET disableServerNagle "));
+        if (disableServerNagleLine != -1)
+        {
+            configContent.RemoveAt(disableServerNagleLine);
             wasChanged = true;
         }
 
