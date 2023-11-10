@@ -1,0 +1,217 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:viewModels="clr-namespace:WinterspringLauncher.ViewModels"
+        mc:Ignorable="d" d:DesignWidth="850" d:DesignHeight="500"
+        x:Class="WinterspringLauncher.Views.MainWindow"
+        x:DataType="viewModels:MainWindowViewModel"
+        Icon="/Assets/icons/winterspring-launcher-icon.ico"
+        Title="Winterspring WoW Launcher"
+        Width="900" Height="500"
+        MinWidth="900" MinHeight="500"
+        Background="#181a1b"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="30"
+        Name="ThisWindow"
+        WindowStartupLocation="CenterScreen"
+>
+
+    <Design.DataContext>
+        <!-- This only sets the DataContext for the previewer in an IDE,
+             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
+        <viewModels:MainWindowViewModel/>
+    </Design.DataContext>
+
+    <Window.Styles>
+        <Styles>
+            <Style Selector="Button">
+                <Setter Property="Cursor" Value="Hand"/>
+            </Style>
+            <Style Selector="TabItem.Header">
+                <Setter Property="Cursor" Value="Hand"/>
+            </Style>
+            
+            <Style Selector="ComboBoxItem">
+                <Setter Property="FontStyle" Value="Italic" />
+            </Style>
+        </Styles>
+    </Window.Styles>
+
+    <Grid RowDefinitions="Auto, *">
+        <!-- Top system bar -->
+        <Panel Grid.Row="0" Height="30" Background="#11ffffff" IsHitTestVisible="False">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Image Grid.Column="0" Margin="10,0,0,0"
+                       Source="/Assets/icons/winterspring-launcher-icon.ico" Width="16" Height="16" VerticalAlignment="Center" />
+
+                <TextBlock Grid.Column="1" Margin="10,0,0,0" Padding="0, 2, 0, 0"
+                           Text="{Binding Title, ElementName=ThisWindow}" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+            </Grid>
+        </Panel>
+        <!-- Body -->
+        <Grid Grid.Row="1" RowDefinitions="Auto, *, Auto" Margin="10">
+            <!-- Top bar -->
+            <Grid Grid.Row="0" ColumnDefinitions="Auto, *, Auto" IsEnabled="{Binding InputIsAllowed}">
+                <StackPanel Orientation="Horizontal" Grid.Column="0" Spacing="10">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Server" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0, 0, 5, 0"/>
+                        <ComboBox SelectedIndex="{Binding SelectedServerIdx, Mode=TwoWay}" ItemsSource="{Binding KnownServerList}" SelectionChanged="ServerSelectionChanged" IsEnabled="{Binding !HermesIsRunning}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}"></TextBlock>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+                    <Button Command="{Binding Logic.OpenGameFolder}" IsEnabled="{ Binding GameFolderExists }">
+                        <Image Margin="0, 1, 0, 0" Source="/Assets/icons/folder.png" Width="20" Height="20" VerticalAlignment="Center" HorizontalAlignment="Center" IsEnabled="{Binding GameIsInstalled}"/>
+                    </Button>
+                    <!--
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Account" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0, 0, 5, 0"/>
+                        <ComboBox SelectedIndex="0">
+                            <ComboBoxItem><TextBlock Text="&lt;Manual Login&gt;" /></ComboBoxItem>
+                        </ComboBox>
+                    </StackPanel>
+                    -->
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Grid.Column="2" Spacing="10">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Language" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0, 0, 5, 0"/>
+                        <ComboBox SelectedIndex="0" IsEnabled="False"> <!-- TODO Multi language support -->
+                            <ComboBoxItem>
+                                <StackPanel Orientation="Horizontal">
+                                    <Image Source="/Assets/icons/language-icons/english.png" Width="20" Height="20" VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                    <TextBlock Text="English" Margin="2, 0, 0, 0" VerticalAlignment="Center" HorizontalAlignment="Left" />
+                                </StackPanel>
+                            </ComboBoxItem>
+                            <ComboBoxItem>
+                                <StackPanel Orientation="Horizontal">
+                                    <Image Source="/Assets/icons/language-icons/chinese.png" Width="20" Height="20" VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                    <TextBlock Text="Chinese" Margin="2, 0, 0, 0" VerticalAlignment="Center" HorizontalAlignment="Left" />
+                                </StackPanel>
+                            </ComboBoxItem>
+                        </ComboBox>
+                    </StackPanel>
+                    <!--
+                    <Button>
+                        <Image Margin="0, 1, 0, 0" Source="/Assets/icons/settings.png" Width="20" Height="20" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                    </Button>
+                    -->
+                </StackPanel>
+            </Grid>
+
+            <!-- Center content -->
+            <Grid RowDefinitions="*" ColumnDefinitions="*" Grid.Row="1" Background="#11ddddff" Margin="0, 10, 0, 0">
+                <TabControl SelectedIndex="0">
+                    <!--
+                    <TabItem Header="Server Announcements" VerticalContentAlignment="Center" IsEnabled="False">
+                        <TextBlock Text="TODO" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                    </TabItem>
+                    <TabItem>
+                        <TabItem.Header>
+                            <TextBlock VerticalAlignment="Center">Launcher Changelog</TextBlock>
+                        </TabItem.Header>
+                        <StackPanel>
+                            <SelectableTextBlock HorizontalAlignment="Left" VerticalAlignment="Center">
+                                <Run>Hello World!Hello World!Hello World!Hello World!</Run>
+                                <LineBreak/>
+                                <Run>Hello World!</Run>
+                                <LineBreak/>
+                                <Run>Hello World!Hello World!Hello World!Hello World!</Run>
+                                <LineBreak/>
+                                <Run>Hello World!</Run>
+                                <LineBreak/>
+                                <Run>Hello World!Hello World!Hello World!Hello World!</Run>
+                                <LineBreak/>
+                                <Run>Hello World!</Run>
+                                <LineBreak/>
+                                <Run>Hello World!Hello World!Hello World!Hello World!</Run>
+                                <LineBreak/>
+                                <Run>Hello World!</Run>
+                            </SelectableTextBlock>
+                        </StackPanel>
+                    </TabItem>
+                    -->
+                    <TabItem>
+                        <TabItem.Header>
+                            <TextBlock VerticalAlignment="Center">Log</TextBlock>
+                        </TabItem.Header>
+                            <ScrollViewer Grid.Row="0" Name="LogScroller" Background="{ DynamicResource TerminalBackground }">
+                                <SelectableTextBlock MaxHeight="900"
+                                                     FontFamily="{StaticResource MonoFont}"
+                                                     Text="{Binding LogEntriesCombined}"
+                                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                                     />
+                            </ScrollViewer>
+                    </TabItem>
+                </TabControl>
+            </Grid>
+
+            <!--Bottom bar -->
+            <StackPanel Grid.Row="2" IsEnabled="{Binding InputIsAllowed}">
+                <Grid>
+                    <ProgressBar Margin="0, 10" Height="20" Foreground="{ Binding ProgressbarColor }" Value="{Binding ProgressbarPercent}"/>
+                    <TextBlock Text="{Binding ProgressbarText}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Grid>
+                <Grid ColumnDefinitions="Auto, *, Auto">
+                    <StackPanel Orientation="Vertical" Grid.Column="0" Spacing="5">
+                        <StackPanel Orientation="Horizontal" ToolTip.Tip="{ Binding ThisLauncherVersionDetailed }">
+                            <TextBlock Text="Launcher: " HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <TextBlock Text="{ Binding ThisLauncherVersion }" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" ToolTip.Tip="{ Binding HermesPidToolTipString, RelativeSource=HermesPid }">
+                            <TextBlock Text="HermesProxy: " HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <TextBlock IsVisible="{ Binding !HermesIsInstalled }" Text="will be installed" />
+                            <TextBlock IsVisible="{ Binding HermesIsInstalled }" Text="{ Binding DetectedHermesVersion }" />
+                            <TextBlock IsVisible="{ Binding HermesIsRunning }">
+                                <Span> (</Span><Span Foreground="#689f38">running</Span><Span>)</Span>
+                                <!-- Button to kill hermes process -->
+                            </TextBlock>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Game Version: " HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{ Binding GameVersion }" />
+                            <TextBlock IsVisible="{ Binding GameIsInstalled }" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Span> (</Span><Span Foreground="#689f38">installed</Span><Span>)</Span>
+                            </TextBlock>
+                            <TextBlock IsVisible="{ Binding !GameIsInstalled }" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Span> (</Span><Span Foreground="#7c2b11">Will be downloaded/patched</Span><Span>)</Span>
+                            </TextBlock>
+                        </StackPanel>
+                    </StackPanel>
+                    <Button Command="{Binding Logic.StartGame}" Grid.Column="2" Background="#689f38" Height="50">
+                        <StackPanel>
+                            <StackPanel IsVisible="{ Binding !InputIsAllowed }" Orientation="Vertical" VerticalAlignment="Center">
+                                <TextBlock Text="Loading..." FontWeight="Bold" HorizontalAlignment="Center" />
+                            </StackPanel>
+                            <StackPanel IsVisible="{ Binding InputIsAllowed }" Orientation="Vertical" VerticalAlignment="Center">
+                                <TextBlock IsVisible="{ Binding !GameIsInstalled }" Text="Download and start game" FontWeight="Bold" HorizontalAlignment="Center" />
+                                <TextBlock IsVisible="{ Binding GameIsInstalled }" Text="Start game" FontWeight="Bold" HorizontalAlignment="Center" />
+                                <TextBlock IsVisible="{ Binding !HermesIsRunning }" Text="HermesProxy will be started" Foreground="#7c2b11" HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Button>
+                    <!--
+                    <Button Grid.Column="2" Background="#689f38" Height="50">
+                        <StackPanel Orientation="Vertical" VerticalAlignment="Center">
+                            <TextBlock Text="Update and start game" FontWeight="Bold" HorizontalAlignment="Center" />
+                            <TextBlock Text="HermesProxy will be started" Foreground="#7c2b11" HorizontalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    -->
+                </Grid>
+            </StackPanel>
+        </Grid>
+    </Grid>
+
+</Window>

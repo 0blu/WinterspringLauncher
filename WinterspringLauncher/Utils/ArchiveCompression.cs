@@ -1,4 +1,7 @@
+using System;
+using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Reflection;
 
 #if PLATFORM_WINDOWS
@@ -9,50 +12,59 @@ namespace WinterspringLauncher.Utils;
 
 public static class ArchiveCompression
 {
-    public static void DecompressWithProgress(string archiveFilePath, string extractionFolderPath)
+    public delegate void UnpackProgressInfoHandler(long totalFileCount, long alreadyUnpackedFileCount);
+
+    public static void Decompress(string archiveFilePath, string extractionFolderPath, string folderToSkipName, UnpackProgressInfoHandler progressHandler, Func<string, bool> shouldBeDecompressedPredicate)
     {
-        if (Path.GetExtension(archiveFilePath).Equals(".zip", StringComparison.InvariantCultureIgnoreCase))
+        byte[] buffer = new byte[4];
+        using (FileStream fileHandle = File.OpenRead(archiveFilePath))
         {
-            DecompressZipWithProgress(archiveFilePath, extractionFolderPath);
+            fileHandle.Read(buffer, 0, 4);
         }
-        else
+
+        if (buffer.SequenceEqual(new byte[] { 0x52, 0x61, 0x72, 0x21 })) // Rar!
         {
-            Decompress7ZWithProgress(archiveFilePath, extractionFolderPath);
+            Decompress7ZWithProgress(archiveFilePath, extractionFolderPath, folderToSkipName, progressHandler, shouldBeDecompressedPredicate);
+        }
+        else if (buffer[..2].SequenceEqual(new byte[] { 0x50, 0x4B })) // Zip
+        {
+            DecompressZipWithProgress(archiveFilePath, extractionFolderPath, folderToSkipName, progressHandler, shouldBeDecompressedPredicate);
+        }
+        else // Error
+        {
+            throw new Exception("Unknown file format. Cannot decompress");
         }
     }
 
-    private static void DecompressZipWithProgress(string archiveFilePath, string extractionFolderPath)
+    private static void DecompressZipWithProgress(string archiveFilePath, string extractionFolderPath, string folderToSkipName, UnpackProgressInfoHandler progressHandler, Func<string, bool> shouldBeDecompressedPredicate)
     {
         using var zip = ZipFile.OpenRead(archiveFilePath);
-        bool ShouldBeDecompressed(ZipArchiveEntry entry) => !entry.FullName.EndsWith("\\") && !entry.FullName.EndsWith("/");
+        bool ShouldBeDecompressed(ZipArchiveEntry entry) => !entry.FullName.EndsWith("\\") && !entry.FullName.EndsWith("/") && shouldBeDecompressedPredicate(entry.FullName);
         var totalSize = zip.Entries.Where(ShouldBeDecompressed).Sum(x => x.Length);
         var totalCount = zip.Entries.Where(ShouldBeDecompressed).Count();
 
-        string ToPath(string path) => path.ReplaceFirstOccurrence("World of Warcraft", extractionFolderPath);
+        string ToPath(string path) => Path.Combine(extractionFolderPath, path);
 
-        var progress = new ProgressBarPrinter("Decompress");
         Console.WriteLine($"Total size to decompress {UtilHelper.ToHumanFileSize(totalSize)}");
-        long alreadyDecompressedSize = 0;
         long alreadyDecompressedCount = 0;
         foreach (var entry in zip.Entries.Where(ShouldBeDecompressed))
         {
             var destPath = ToPath(entry.FullName);
             Directory.CreateDirectory(Path.GetDirectoryName(destPath)!);
             entry.ExtractToFile(destPath, overwrite: true);
-            alreadyDecompressedSize += entry.Length;
             alreadyDecompressedCount++;
-            progress.UpdateState((alreadyDecompressedSize / (double)(totalSize)), $"{alreadyDecompressedCount}/{totalCount}".PadLeft(3+1+3));
+            progressHandler(totalCount, alreadyDecompressedCount);
         }
-        progress.Done();
+        progressHandler(totalCount, totalCount);
     }
 
 #if !PLATFORM_WINDOWS
-    private static void Decompress7ZWithProgress(string archiveFilePath, string extractionFolderPath)
+    private static void Decompress7ZWithProgress(string archiveFilePath, string extractionFolderPath, string folderToSkipName, UnpackProgressInfoHandler progressHandler, Func<string, bool> shouldBeDecompressed)
     {
         throw new NotSupportedException("7z is only supported on Windows");
     }
 #else
-    private static void Decompress7ZWithProgress(string archiveFilePath, string extractionFolderPath)
+    private static void Decompress7ZWithProgress(string archiveFilePath, string extractionFolderPath, string folderToSkipName, UnpackProgressInfoHandler progressHandler, Func<string, bool> shouldBeDecompressedPredicate)
     {
         var assembly = Assembly.GetExecutingAssembly();
         var resourceName = "WinterspringLauncher.7z.dll";
@@ -79,9 +91,8 @@ public static class ArchiveCompression
         Console.WriteLine($"Extracting archive into {extractionFolderPath}");
         using (var archiveFile = new SevenZipExtractor(downloadedFile))
         {
-            var decompressProgress = new ProgressBarPrinter("Decompress");
-            bool ShouldBeDecompressed(ArchiveFileInfo entry) => !entry.IsDirectory;
-            string ToPath(string path) => path.ReplaceFirstOccurrence("World of Warcraft", extractionFolderPath);
+            bool ShouldBeDecompressed(ArchiveFileInfo entry) => !entry.IsDirectory && shouldBeDecompressedPredicate(entry.FileName);
+            string ToPath(string path) => path.ReplaceFirstOccurrence(folderToSkipName, extractionFolderPath);
 
             long totalSize = 0;
             long totalCount = 0;
@@ -93,9 +104,8 @@ public static class ArchiveCompression
                     totalCount++;
                 }
             }
-            Console.WriteLine($"Total size to decompress {UtilHelper.ToHumanFileSize(totalSize)}");
 
-            long alreadyDecompressedSize = 0;
+            Console.WriteLine($"Total size to decompress {UtilHelper.ToHumanFileSize(totalSize)}");
             long alreadyDecompressedCount = 0;
             foreach (var entry in archiveFile.ArchiveFileData)
             {
@@ -107,12 +117,20 @@ public static class ArchiveCompression
                     {
                         archiveFile.ExtractFile(entry.FileName, fStream);
                     }
-                    alreadyDecompressedSize += (long) entry.Size;
                     alreadyDecompressedCount++;
-                    decompressProgress.UpdateState((alreadyDecompressedSize / (double)(totalSize)), $"{alreadyDecompressedCount}/{totalCount}".PadLeft(3+1+3));
+                    progressHandler(totalCount, alreadyDecompressedCount);
                 }
             }
-            decompressProgress.Done();
+            progressHandler(totalCount, totalCount);
+        }
+
+        try
+        {
+            File.Delete("7z.dll");
+        }
+        catch
+        {
+            // ignored
         }
     }
 #endif

@@ -1,9 +1,13 @@
-﻿using System.Globalization;
+﻿using System;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading.Tasks;
 using System.Timers;
 
 namespace WinterspringLauncher.Utils;
 
-public class FileDownloader : IDisposable
+public class ProgressiveFileDownloader : IDisposable
 {
     private readonly string _downloadUrl;
     private readonly string _destinationFilePath;
@@ -12,7 +16,7 @@ public class FileDownloader : IDisposable
 
     public delegate void InitialFileInfoHandler(long? totalFileSize);
     public delegate void ProgressFixedChangedHandler(long? totalFileSize, long alreadyReceived, long currentBytesPerSecond);
-    public delegate void DownloadDoneHandler();
+    public delegate void DownloadDoneHandler(long downloadedBytes);
 
     public event InitialFileInfoHandler? InitialInfo;
     public event ProgressFixedChangedHandler? ProgressChangedFixedDelay;
@@ -28,29 +32,13 @@ public class FileDownloader : IDisposable
     private readonly double?[] _lastDownloadRates = new double?[15];
     private bool _hadZeroRate = false;
 
-    public FileDownloader(string downloadUrl, string destinationFilePath)
+    public ProgressiveFileDownloader(string downloadUrl, string destinationFilePath)
     {
         _downloadUrl = downloadUrl;
         _destinationFilePath = destinationFilePath;
         _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
         _updateTimer = new System.Timers.Timer(500 /*ms*/);
         _updateTimer.Elapsed += TimerElapsed;
-    }
-
-    public async Task StartPostUploadFileAndDownload(Stream uploadedFile)
-    {
-        _httpClient.Timeout = Timeout.InfiniteTimeSpan;
-        using var content = new MultipartFormDataContent("Upload----" + DateTime.Now.ToString(CultureInfo.InvariantCulture));
-
-        ProgressBarPrinter uploadProgress = new ProgressBarPrinter("Patching");
-        content.Add(new StreamContent(uploadProgress.FromStream(uploadedFile)), "file", "file");
-
-        var request = new HttpRequestMessage(HttpMethod.Post, _downloadUrl);
-        request.Content = content;
-
-        using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-        uploadProgress.Done();
-        await DownloadFileFromHttpResponseMessage(response);
     }
 
     public async Task StartGetDownload()
@@ -111,7 +99,7 @@ public class FileDownloader : IDisposable
             _updateTimer.Stop();
         }
 
-        TriggerDownloadDone();
+        TriggerDownloadDone(totalBytesRead);
     }
 
     private void TriggerInitialInfo(long? totalDownloadSize)
@@ -159,9 +147,9 @@ public class FileDownloader : IDisposable
         ProgressChangedFixedDelay?.Invoke(_totalFileSize, _alreadyReceivedBytes, (long)dlRate);
     }
 
-    private void TriggerDownloadDone()
+    private void TriggerDownloadDone(long bytesDownloaded)
     {
-        DownloadDone?.Invoke();
+        DownloadDone?.Invoke(bytesDownloaded);
     }
 
     public void Dispose()
