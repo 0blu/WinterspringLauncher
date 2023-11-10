@@ -37,11 +37,11 @@ public partial class LauncherLogic
         if (_config.LastSelectedServerName == "") // first configuration
         {
             _config.LastSelectedServerName = LocaleDefaults.GetBestServerName();
-            _config.GitHubMirror = LocaleDefaults.GetBestGitHubMirror();
+            _config.GitHubApiMirror = LocaleDefaults.GetBestGitHubMirror();
         }
 
-        if (_config.GitHubMirror != null)
-            GitHubApi.GitHubApiAddress = _config.GitHubMirror;
+        if (_config.GitHubApiMirror != null)
+            GitHubApi.GitHubApiAddress = _config.GitHubApiMirror;
 
         for (var i = 0; i < _config.KnownServers.Length; i++)
         {

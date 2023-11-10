@@ -23,7 +23,7 @@ public class VersionedBaseConfig
 public class LauncherConfig : VersionedBaseConfig
 {
     public string LauncherLanguage { get; set; } = "en";
-    public string? GitHubMirror { get; set; } = null; // example "https://asia.cdn.everlook-wow.net/github-mirror/" + "/repos/{repoName}/releases/latest"
+    public string? GitHubApiMirror { get; set; } = null; // example "http://asia.cdn.everlook.aclon.cn/github-mirror/api/" + "/repos/{repoName}/releases/latest"
     public string LastSelectedServerName { get; set; } = "";
     public bool CheckForLauncherUpdates { get; set; } = true;
     public bool CheckForHermesUpdates { get; set; } = true;
@@ -175,7 +175,7 @@ public class LauncherConfig : VersionedBaseConfig
             {
                 var knownServer = v2Config.KnownServers.First(g => g.RealmlistAddress.Contains("everlook-wow", StringComparison.InvariantCultureIgnoreCase));
                 var knownInstallation = v2Config.GameInstallations.First(g => g.Key == knownServer.UsedInstallation);
-                v2Config.GitHubMirror = "https://asia.cdn.everlook-wow.net/github-mirror/api/";
+                v2Config.GitHubApiMirror = "http://asia.cdn.everlook.aclon.cn/github-mirror/api/";
                 v2Config.LastSelectedServerName = knownServer.Name;
                 TryUpgradeOldGameFolder(knownInstallation.Value.Directory, v1Config.GamePath);
             }
