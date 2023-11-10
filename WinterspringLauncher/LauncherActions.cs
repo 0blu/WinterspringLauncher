@@ -109,6 +109,7 @@ public static class LauncherActions
             FileName = executablePath,
             WorkingDirectory = hermesDir,
             RedirectStandardOutput = true,
+            CreateNoWindow = true,
             ArgumentList = {
                 "--no-version-check",
                 "--set", $"ClientBuild={modernClientBuild}",
