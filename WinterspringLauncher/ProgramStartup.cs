@@ -2,6 +2,7 @@
 using System;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Avalonia.Logging;
@@ -18,6 +19,8 @@ class ProgramStartup
     {
         CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
         Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+
+        LocaleDefaults.ShouldUseAsiaPreferences = args.Contains("--use-asia-defaults");
 
         bool weAreOnMacOs = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
         if (weAreOnMacOs)
