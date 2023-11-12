@@ -139,10 +139,8 @@ public static class ArchiveCompression
         using var zip = ZipFile.OpenRead(zipFilePath); 
         string? zipBaseFolder = GetBaseFolderFromZip(zip);
 
-#if DEBUG
         Console.WriteLine($"Unzipping {zipFilePath}, detected '{zipBaseFolder ?? "<null>"}' as first folder");
-#endif
-        
+
         string ToFilteredPath(string path) => zipBaseFolder != null
             ? path.ReplaceFirstOccurrence(zipBaseFolder, outputDirectory)
             : path;
