@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using WinterspringLauncher.Utils;
 
 namespace WinterspringLauncher;
@@ -178,6 +179,9 @@ public static class LauncherActions
 
         //startInfo.EnvironmentVariables.Clear();
         var process = Process.Start(startInfo)!;
-
+        while (!process.HasExited && process.VirtualMemorySize64 < 100 * 1024 * 1024)
+        {
+            Thread.Sleep(TimeSpan.FromSeconds(1));
+        }
     }
 }

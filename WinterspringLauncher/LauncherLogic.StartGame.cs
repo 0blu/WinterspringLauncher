@@ -284,14 +284,12 @@ public partial class LauncherLogic
             _model.SetProgressbar("Starting Game", 90, overallProgressColor);
             LauncherActions.PrepareGameConfigWtf(gameInstallation.Directory, portalAddress: "127.0.0.1:1119");
 
-            _model.SetProgressbar("Starting Game", 95, overallProgressColor);
-            await Task.Delay(TimeSpan.FromSeconds(0.5));
-            LauncherActions.StartGame(Path.Combine(gameInstallation.Directory, SubPathToWowForCustomServers));
             if (buildInfoWasChanged)
-            {
-                _model.SetProgressbar("Your game is updating please wait a bit (check Task Manager!)", 100, sideProgressColor);
-                await Task.Delay(TimeSpan.FromSeconds(60));
-            }
+                _model.SetProgressbar("Your game is updating please wait a bit (check Task Manager!)", 95, sideProgressColor);
+            else
+                _model.SetProgressbar("Starting Game", 95, overallProgressColor);
+
+            LauncherActions.StartGame(Path.Combine(gameInstallation.Directory, SubPathToWowForCustomServers));
             await Task.Delay(TimeSpan.FromSeconds(5));
         }).ContinueWith((t) =>
         {
