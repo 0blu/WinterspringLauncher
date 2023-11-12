@@ -121,6 +121,18 @@ public partial class LauncherLogic
                     _model.AddLogEntry($"Unpack to: {targetDir}");
                     _model.SetProgressbar("Unpack WoW", 0, Brush.Parse("#d84315"));
                     RunUnpack(downloadDestLocation, targetDir);
+                    
+                    #if !DEBUG
+                    try
+                    {
+                        File.Delete(downloadDestLocation);
+                    }
+                    catch(Exception e)
+                    {
+                        _model.AddLogEntry($"Failed to delete tmp file '{downloadDestLocation}'");
+                        await Task.Delay(TimeSpan.FromSeconds(5));
+                    }
+                    #endif
                 }
 
                 try {
