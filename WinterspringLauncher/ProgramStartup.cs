@@ -20,7 +20,8 @@ class ProgramStartup
         CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
         Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 
-        LocaleDefaults.ShouldUseAsiaPreferences = args.Contains("--use-asia-defaults");
+        if (args.Contains("--use-asia-defaults"))
+            LocaleDefaults.ShouldUseAsiaPreferences = true;
 
         bool weAreOnMacOs = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
         if (weAreOnMacOs)
