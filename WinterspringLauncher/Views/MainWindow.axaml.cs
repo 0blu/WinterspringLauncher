@@ -32,4 +32,10 @@ public partial class MainWindow : Window
             DataContext.Logic.ChangeServerIdx();
         }
     }
+
+    protected override void OnClosing(WindowClosingEventArgs e)
+    {
+        DataContext.Logic.KillHermesProxy();
+        base.OnClosing(e);
+    }
 }

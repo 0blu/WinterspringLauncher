@@ -139,4 +139,18 @@ public partial class LauncherLogic
                 _model.UpdateProgress(percent, $"   {alreadyUnpacked} / {totalFileCount}   ");
             });
     }
+
+    public void KillHermesProxy()
+    {
+        try
+        {
+            _hermesProcess?.Kill();
+        }
+        catch(Exception e)
+        {
+            _model.AddLogEntry("Fail to stop HermesProxy");
+            Console.WriteLine("Fail to kill HermesProxy");
+            Console.WriteLine(e);
+        }
+    }
 }

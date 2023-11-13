@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -11,6 +12,8 @@ namespace WinterspringLauncher;
 
 public partial class LauncherLogic
 {
+    private Process? _hermesProcess;
+
     public void StartGame()
     {
         _model.InputIsAllowed = false;
@@ -291,17 +294,17 @@ public partial class LauncherLogic
             if (splittedRealmlist.Length == 2)
                 hermesSettingsOverwrite.Add("ServerPort", splittedRealmlist.Last());
 
-            var hermesProcess = LauncherActions.StartHermesProxy(_config.HermesProxyLocation, modernBuild, hermesSettingsOverwrite, (logLine) => { _model.AddLogEntry(logLine); });
-            _model.SetHermesPid(hermesProcess.Id);
-            hermesProcess.Exited += (a, e) =>
+            _hermesProcess = LauncherActions.StartHermesProxy(_config.HermesProxyLocation, modernBuild, hermesSettingsOverwrite, (logLine) => { _model.AddLogEntry(logLine); });
+            _model.SetHermesPid(_hermesProcess.Id);
+            _hermesProcess.Exited += (a, e) =>
             {
-                _model.AddLogEntry($"HERMES PROXY HAS CLOSED! Status: {hermesProcess.ExitCode}");
+                _model.AddLogEntry($"HERMES PROXY HAS CLOSED! Status: {_hermesProcess.ExitCode}");
                 _model.SetHermesPid(null);
             };
             await Task.Delay(TimeSpan.FromSeconds(1));
-            if (hermesProcess.HasExited)
+            if (_hermesProcess.HasExited)
             {
-                _model.AddLogEntry($"HERMES PROXY HAS CLOSED PREMATURELY! Status: {hermesProcess.ExitCode}");
+                _model.AddLogEntry($"HERMES PROXY HAS CLOSED PREMATURELY! Status: {_hermesProcess.ExitCode}");
                 _model.SetHermesPid(null);
             }
 
