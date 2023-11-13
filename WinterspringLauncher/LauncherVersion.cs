@@ -4,7 +4,7 @@ using WinterspringLauncher.Utils;
 
 namespace WinterspringLauncher;
 
-public class LauncherVersion
+public static class LauncherVersion
 {
     public static string ShortVersionString
     {
