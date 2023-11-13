@@ -215,69 +215,7 @@ public partial class LauncherLogic
             _model.SetProgressbar("Checking HermesProxy status", 50, overallProgressColor);
             await Task.Delay(TimeSpan.FromSeconds(0.5));
 
-            string? localHermesVersion = null;
-            var hermesProxyVersionFile = Path.Combine(_config.HermesProxyLocation, "version.txt");
-            if (File.Exists(hermesProxyVersionFile))
-            {
-                localHermesVersion = File.ReadLines(hermesProxyVersionFile).First();
-            }
-
-            if (localHermesVersion == null || _config.CheckForHermesUpdates)
-            {
-                GitHubReleaseInfo releaseInfo = GitHubApi.LatestReleaseVersion("WowLegacyCore/HermesProxy");
-                var versionString = $"{releaseInfo.TagName}|{releaseInfo.Name}";
-                if (localHermesVersion != versionString)
-                {
-                    var osName = weAreOnMacOs ? "mac" : "win";
-                    var possibleDownloads = releaseInfo.Assets!.FindAll(a => a.Name.Contains(osName, StringComparison.CurrentCultureIgnoreCase));
-                    if (possibleDownloads.Count != 1)
-                        throw new Exception($"Found {possibleDownloads.Count} HermesProxy versions for your OS");
-
-                    var targetDir = new DirectoryInfo(FullPath(_config.HermesProxyLocation)).FullName;
-                    if (!Directory.Exists(targetDir))
-                        Directory.CreateDirectory(targetDir);
-
-                    var downloadDestLocation = targetDir + ".partial-download";
-
-                    _model.SetProgressbar("Downloading HermesProxy", 0, Brush.Parse("#1976d2"));
-                    var downloadUrl = possibleDownloads[0].DownloadUrl;
-                    _model.AddLogEntry($"Download URL: {downloadUrl}");
-                    _model.AddLogEntry($"Download Location: {downloadDestLocation}");
-                    RunDownload(downloadUrl, downloadDestLocation);
-
-                    var directories = Directory.GetDirectories(targetDir);
-                    foreach (string directory in directories)
-                    {
-                        if (!directory.Contains("AccountData")) // we want to keep our AccountData
-                            Directory.Delete(directory, recursive: true);
-                    }
-
-                    Directory.CreateDirectory(targetDir);
-
-                    _model.SetProgressbar("Unpack HermesProxy", 0, Brush.Parse("#d84315"));
-                    RunUnpack(downloadDestLocation, targetDir);
-
-#if !DEBUG
-                    try
-                    {
-                        File.Delete(downloadDestLocation);
-                    }
-                    catch(Exception e)
-                    {
-                        _model.AddLogEntry($"Failed to delete tmp file '{downloadDestLocation}'");
-                        await Task.Delay(TimeSpan.FromSeconds(5));
-                    }
-#endif
-
-                    File.WriteAllLines(hermesProxyVersionFile, new string[]
-                    {
-                        versionString,
-                        $"Source: {downloadUrl}"
-                    });
-
-                    _model.SetHermesVersion(releaseInfo.TagName);
-                }
-            }
+            await UpdateHermesProxyIfNecessary();
 
             var modernBuild = ushort.Parse(gameInstallation.Version.Split(".").Last());
 
@@ -330,5 +268,87 @@ public partial class LauncherLogic
                 _model.InputIsAllowed = true;
             }
         });
+    }
+
+    private async Task UpdateHermesProxyIfNecessary()
+    {
+        string? localHermesVersion = null;
+        var hermesProxyVersionFile = Path.Combine(_config.HermesProxyLocation, "version.txt");
+        if (File.Exists(hermesProxyVersionFile))
+        {
+            localHermesVersion = File.ReadLines(hermesProxyVersionFile).First();
+        }
+
+        if (localHermesVersion == null || _config.CheckForHermesUpdates)
+        {
+            GitHubReleaseInfo? releaseInfo;
+            try
+            {
+                releaseInfo = GitHubApi.LatestReleaseVersion("WowLegacyCore/HermesProxy");
+            }
+            catch (Exception e) when (localHermesVersion != null)
+            {
+                _model.AddLogEntry("Error: Failed to check HermesProxy version!");
+                Console.WriteLine("Exception while checking GitHub status of HermesProxy");
+                Console.WriteLine(e);
+                await Task.Delay(TimeSpan.FromSeconds(5));
+                return;
+            }
+
+            bool weAreOnMacOs = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
+
+            var versionString = $"{releaseInfo.TagName}|{releaseInfo.Name}";
+            if (localHermesVersion != versionString)
+            {
+                var osName = weAreOnMacOs ? "mac" : "win";
+                var possibleDownloads = releaseInfo.Assets!.FindAll(a => a.Name.Contains(osName, StringComparison.CurrentCultureIgnoreCase));
+                if (possibleDownloads.Count != 1)
+                    throw new Exception($"Found {possibleDownloads.Count} HermesProxy versions for your OS");
+
+                var targetDir = new DirectoryInfo(FullPath(_config.HermesProxyLocation)).FullName;
+                if (!Directory.Exists(targetDir))
+                    Directory.CreateDirectory(targetDir);
+
+                var downloadDestLocation = targetDir + ".partial-download";
+
+                _model.SetProgressbar("Downloading HermesProxy", 0, Brush.Parse("#1976d2"));
+                var downloadUrl = possibleDownloads[0].DownloadUrl;
+                _model.AddLogEntry($"Download URL: {downloadUrl}");
+                _model.AddLogEntry($"Download Location: {downloadDestLocation}");
+                RunDownload(downloadUrl, downloadDestLocation);
+
+                var directories = Directory.GetDirectories(targetDir);
+                foreach (string directory in directories)
+                {
+                    if (!directory.Contains("AccountData")) // we want to keep our AccountData
+                        Directory.Delete(directory, recursive: true);
+                }
+
+                Directory.CreateDirectory(targetDir);
+
+                _model.SetProgressbar("Unpack HermesProxy", 0, Brush.Parse("#d84315"));
+                RunUnpack(downloadDestLocation, targetDir);
+
+#if !DEBUG
+                try
+                {
+                    File.Delete(downloadDestLocation);
+                }
+                catch(Exception e)
+                {
+                    _model.AddLogEntry($"Failed to delete tmp file '{downloadDestLocation}'");
+                    await Task.Delay(TimeSpan.FromSeconds(5));
+                }
+#endif
+
+                File.WriteAllLines(hermesProxyVersionFile, new string[]
+                {
+                    versionString,
+                    $"Source: {downloadUrl}"
+                });
+
+                _model.SetHermesVersion(releaseInfo.TagName);
+            }
+        }
     }
 }
