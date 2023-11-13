@@ -150,12 +150,14 @@ public partial class MainWindowViewModel : ObservableObject
 
             var avgRate = _lastProgressRates.Where(x => x.HasValue).Select(x => x!.Value).DefaultIfEmpty(0).Average();
             if (avgRate == 0)
-            {
                 return null;
-            }
 
             const double maxPercent = 100;
-            return TimeSpan.FromSeconds((maxPercent - percent) / avgRate);
+            double time = (maxPercent - percent) / avgRate;
+            if (double.IsNaN(time))
+                return null;
+
+            return TimeSpan.FromSeconds(time);
         }
     }
 }
