@@ -38,7 +38,7 @@ public partial class LauncherLogic
             _config.GitHubApiMirror = LocaleDefaults.GetBestGitHubMirror();
         }
 
-        if (_config.GitHubApiMirror != null)
+        if (!string.IsNullOrWhiteSpace(_config.GitHubApiMirror))
             GitHubApi.GitHubApiAddress = _config.GitHubApiMirror;
 
         for (var i = 0; i < _config.KnownServers.Length; i++)
@@ -53,6 +53,7 @@ public partial class LauncherLogic
 
         _model.AddLogEntry($"Launcher started");
         _model.AddLogEntry($"Base path: \"{FullPath(".")}\"");
+        _model.AddLogEntry($"GitHub API Address: {GitHubApi.GitHubApiAddress}");
 
         string? localHermesVersion = null;
         var hermesProxyVersionFile = Path.Combine(_config.HermesProxyLocation, "version.txt");
