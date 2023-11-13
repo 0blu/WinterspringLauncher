@@ -22,6 +22,8 @@ public class VersionedBaseConfig
 
 public class LauncherConfig : VersionedBaseConfig
 {
+    private string _internalLastLoadedJsonString = string.Empty;
+
     public string LauncherLanguage { get; set; } = "en";
     public string? GitHubApiMirror { get; set; } = null; // example "http://asia.cdn.everlook.aclon.cn/github-mirror/api/" + "/repos/{repoName}/releases/latest"
     public string LastSelectedServerName { get; set; } = "";
@@ -119,7 +121,10 @@ public class LauncherConfig : VersionedBaseConfig
     {
         var options = new JsonSerializerOptions { WriteIndented = true };
         string jsonString = JsonSerializer.Serialize(this, options);
-        File.WriteAllText(configPath, jsonString, Encoding.UTF8);
+        if (jsonString != _internalLastLoadedJsonString)
+        {
+            File.WriteAllText(configPath, jsonString, Encoding.UTF8);
+        }
     }
 
     public static LauncherConfig LoadOrCreateDefault(string configPath)
@@ -137,6 +142,7 @@ public class LauncherConfig : VersionedBaseConfig
             if (loadedJson != null)
             {
                 config = loadedJson;
+                config._internalLastLoadedJsonString = configTextContent;
             }
             else
             {
