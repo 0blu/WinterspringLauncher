@@ -232,6 +232,12 @@ public partial class LauncherLogic
             if (splittedRealmlist.Length == 2)
                 hermesSettingsOverwrite.Add("ServerPort", splittedRealmlist.Last());
 
+            if (serverInfo.HermesSettings != null)
+            {
+                foreach (var customSettings in serverInfo.HermesSettings)
+                    hermesSettingsOverwrite.Add(customSettings.Key, customSettings.Value);
+            }
+
             _hermesProcess = LauncherActions.StartHermesProxy(_config.HermesProxyLocation, modernBuild, hermesSettingsOverwrite, (logLine) => { _model.AddLogEntry(logLine); });
             _model.SetHermesPid(_hermesProcess.Id);
             _hermesProcess.Exited += (a, e) =>
