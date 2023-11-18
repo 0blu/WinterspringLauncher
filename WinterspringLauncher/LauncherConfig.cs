@@ -17,7 +17,7 @@ public enum OperatingSystem
 
 public class VersionedBaseConfig
 {
-    public int ConfigVersion { get; set; } = 2;
+    public int ConfigVersion { get; set; } = 3;
 }
 
 public class LauncherConfig : VersionedBaseConfig
@@ -165,7 +165,7 @@ public class LauncherConfig : VersionedBaseConfig
             return currentConfig;
         }
 
-        if (configVersion.ConfigVersion >= 2)
+        if (configVersion.ConfigVersion >= 3)
             return currentConfig; // already on latest version
 
         if (configVersion.ConfigVersion == 1)
@@ -174,26 +174,38 @@ public class LauncherConfig : VersionedBaseConfig
             if (v1Config == null)
                 return currentConfig; // Error ?
 
-            var v2Config = new LauncherConfig();
+            var newConfig = new LauncherConfig();
 
             // If a official everlook server is detected switch the installation directory, so the client does not need to redownload it
             if (v1Config.Realmlist.Contains("everlook-wow.net", StringComparison.InvariantCultureIgnoreCase))
             {
-                var knownServer = v2Config.KnownServers.First(g => g.RealmlistAddress.Contains("everlook-wow", StringComparison.InvariantCultureIgnoreCase));
-                var knownInstallation = v2Config.GameInstallations.First(g => g.Key == knownServer.UsedInstallation);
-                v2Config.GitHubApiMirror = "http://asia.cdn.everlook.aclon.cn/github-mirror/api/";
-                v2Config.LastSelectedServerName = knownServer.Name;
+                var knownServer = newConfig.KnownServers.First(g => g.RealmlistAddress.Contains("everlook-wow", StringComparison.InvariantCultureIgnoreCase));
+                var knownInstallation = newConfig.GameInstallations.First(g => g.Key == knownServer.UsedInstallation);
+                newConfig.GitHubApiMirror = "http://asia.cdn.everlook.aclon.cn/github-mirror/api/";
+                newConfig.LastSelectedServerName = knownServer.Name;
                 TryUpgradeOldGameFolder(knownInstallation.Value.Directory, v1Config.GamePath);
             }
             else if (v1Config.Realmlist.Contains("everlook.org", StringComparison.InvariantCultureIgnoreCase))
             {
-                var knownServer = v2Config.KnownServers.First(g => g.RealmlistAddress.Contains("everlook.org", StringComparison.InvariantCultureIgnoreCase));
-                var knownInstallation = v2Config.GameInstallations.First(g => g.Key == knownServer.UsedInstallation);
-                v2Config.LastSelectedServerName = knownServer.Name;
+                var knownServer = newConfig.KnownServers.First(g => g.RealmlistAddress.Contains("everlook.org", StringComparison.InvariantCultureIgnoreCase));
+                var knownInstallation = newConfig.GameInstallations.First(g => g.Key == knownServer.UsedInstallation);
+                newConfig.LastSelectedServerName = knownServer.Name;
                 TryUpgradeOldGameFolder(oldGameFolder: v1Config.GamePath, newGameFolder: knownInstallation.Value.Directory);
             }
 
-            return JsonSerializer.Serialize(v2Config);
+            return JsonSerializer.Serialize(newConfig);
+        }
+
+        if (configVersion.ConfigVersion == 2)
+        {
+            var newConfig = JsonSerializer.Deserialize<LauncherConfig>(currentConfig);
+
+            if (newConfig.GitHubApiMirror == "http://asia.cdn.everlook-wow.net/github-mirror/api/")
+                newConfig.GitHubApiMirror = "http://asia.cdn.everlook.aclon.cn/github-mirror/api/";
+
+            newConfig.ConfigVersion = 3;
+
+            return JsonSerializer.Serialize(newConfig);
         }
 
         Console.WriteLine("Unknown version");

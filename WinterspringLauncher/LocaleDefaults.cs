@@ -13,8 +13,8 @@ public static class LocaleDefaults
     }
 
     public static string? GetBestGitHubMirror()
-    { 
-        return ShouldUseAsiaPreferences ? "https://asia.cdn.everlook-wow.net/github-mirror/api/" : null;
+    {
+        return ShouldUseAsiaPreferences ? "https://asia.cdn.everlook.aclon.cn/github-mirror/api/" : null;
     }
 
     public static string GetBestServerName()
