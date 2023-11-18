@@ -58,7 +58,8 @@ public partial class LauncherLogic
             {
                 _model.AddLogEntry("Starting another game instance");
                 _model.SetProgressbar("Starting Game", 90, overallProgressColor);
-                LauncherActions.PrepareGameConfigWtf(gameInstallation.Directory, portalAddress: "127.0.0.1:1119");
+                string bnetPortStr = serverInfo.HermesSettings?.GetValueOrDefault("BNetPort") ?? "1119";
+                LauncherActions.PrepareGameConfigWtf(gameInstallation.Directory, portalAddress: $"127.0.0.1:{bnetPortStr}");
 
                 _model.SetProgressbar("Starting Game", 95, overallProgressColor);
                 await Task.Delay(TimeSpan.FromSeconds(0.5));
@@ -253,7 +254,10 @@ public partial class LauncherLogic
             }
 
             _model.SetProgressbar("Starting Game", 90, overallProgressColor);
-            LauncherActions.PrepareGameConfigWtf(gameInstallation.Directory, portalAddress: "127.0.0.1:1119");
+            {
+                string bnetPortStr = serverInfo.HermesSettings?.GetValueOrDefault("BNetPort") ?? "1119";
+                LauncherActions.PrepareGameConfigWtf(gameInstallation.Directory, portalAddress: $"127.0.0.1:{bnetPortStr}");
+            }
 
             if (buildInfoWasChanged)
                 _model.SetProgressbar("Your game is updating please wait a bit (check Task Manager!)", 95, sideProgressColor);
