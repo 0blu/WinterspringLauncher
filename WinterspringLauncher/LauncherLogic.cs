@@ -4,8 +4,12 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Threading;
 using WinterspringLauncher.Utils;
 using WinterspringLauncher.ViewModels;
+using WinterspringLauncher.Views;
 
 namespace WinterspringLauncher;
 
@@ -76,6 +80,7 @@ public partial class LauncherLogic
                         _model.AddLogEntry($"This launcher has a new version {updateInformation.VersionName} ({updateInformation.ReleaseDate:yyyy-MM-dd})");
                         _model.AddLogEntry($"You can download it here {updateInformation.URLLinkToReleasePage}");
                         _model.AddLogEntry($"--------------------------");
+                        CreateUpdatePopup(updateInformation);
                     }
                     Console.WriteLine("Launcher update check done");
                 }
@@ -86,6 +91,18 @@ public partial class LauncherLogic
                 }
             });
         }
+    }
+
+    private void CreateUpdatePopup(LauncherVersion.UpdateInformation updateInformation)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow != null)
+            {
+                var dialog = new NewVersionAvailableDialog(updateInformation);
+                dialog.ShowDialog(desktop.MainWindow);
+            }
+        });
     }
 
     public void ChangeServerIdx()

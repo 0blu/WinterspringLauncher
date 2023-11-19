@@ -20,6 +20,9 @@ class ProgramStartup
         CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
         Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 
+        if (LauncherUpdateHandler.HandleStartArguments(args))
+            return;
+
         if (args.Contains("--use-asia-defaults"))
             LocaleDefaults.ShouldUseAsiaPreferences = true;
 
