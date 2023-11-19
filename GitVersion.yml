@@ -1,0 +1,3 @@
+﻿branches:
+  main:
+    regex: ^stable$
